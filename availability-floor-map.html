@@ -1,0 +1,1575 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#102225">
+  <title>FLEXDESK | Check Availability</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #142d30;
+      --muted: #60777a;
+      --teal: #087e83;
+      --orange: #f07836;
+      --card: rgba(255, 255, 255, .88);
+      --line: #d7e6e4;
+      --green: #55df82;
+      --red: #ff626b;
+      --blue: #4caeff;
+      --grey: #7d878a;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-synthesis: none;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; color: var(--ink); background: #e8f2ef; }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, select:focus-visible, [tabindex="0"]:focus-visible {
+      outline: 3px solid #ffb35d;
+      outline-offset: 2px;
+    }
+    .app-shell { min-height: 100vh; background: linear-gradient(125deg, #04777d 0%, #168e85 38%, #e87d3f 100%); }
+    .topbar { min-height: 64px; display: flex; align-items: center; gap: 14px; padding: 12px clamp(16px, 4vw, 54px); color: #f4ffff; background: rgba(9, 36, 39, .22); border-bottom: 1px solid rgba(255,255,255,.2); }
+    .brand { font-size: 15px; font-weight: 850; letter-spacing: .16em; }
+    .topbar .subbrand { color: #d3f4ef; font-size: 12px; letter-spacing: .07em; }
+    .step-chip { margin-left: auto; padding: 7px 11px; border: 1px solid rgba(255,255,255,.3); border-radius: 999px; color: #f7fffd; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+    .screen { display: none; }
+    .screen.active { display: block; animation: appear .24s ease-out; }
+    @keyframes appear { from { opacity: .2; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+    .form-wrap { max-width: 1160px; margin: 0 auto; padding: clamp(24px, 5vw, 58px) 20px 42px; }
+    .heading { margin: 0 0 22px; color: white; }
+    .heading .eyebrow { color: #d1fff3; font-size: 11px; font-weight: 800; letter-spacing: .2em; }
+    .heading h1 { margin: 8px 0; font-size: clamp(28px, 4vw, 42px); letter-spacing: -.04em; }
+    .heading p { max-width: 650px; margin: 0; color: rgba(255,255,255,.88); font-size: 14px; line-height: 1.55; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: stretch; }
+    .glass-card { min-width: 0; padding: clamp(18px, 2.5vw, 27px); border: 1px solid rgba(255,255,255,.72); border-radius: 19px; background: var(--card); box-shadow: 0 20px 44px rgba(7, 39, 38, .16); backdrop-filter: blur(16px); }
+    .field { position: relative; margin-bottom: 16px; }
+    .field:last-child { margin-bottom: 0; }
+    .field label, .field-label { display: block; margin-bottom: 7px; color: #385457; font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+    .field input, .field select, .search-input {
+      width: 100%; min-height: 43px; padding: 10px 12px; border: 1px solid #cbdcda; border-radius: 10px; color: #173437; background: rgba(255,255,255,.92);
+    }
+    .field select:disabled, .field input:disabled { color: #839394; background: #edf2f1; cursor: not-allowed; }
+    .help { margin: 6px 0 0; color: #718486; font-size: 11px; line-height: 1.45; }
+    .error { min-height: 0; margin: 5px 0 0; color: #ae3942; font-size: 11px; }
+    .error:empty { display: none; }
+    .loc-options { position: absolute; z-index: 12; top: calc(100% + 4px); left: 0; right: 0; max-height: 250px; overflow-y: auto; padding: 5px; border: 1px solid #cbdcda; border-radius: 11px; background: #fff; box-shadow: 0 12px 30px #143a3a24; }
+    .loc-options[hidden] { display: none; }
+    .loc-option { display: block; width: 100%; padding: 9px 10px; border: 0; border-radius: 7px; color: #28484a; background: transparent; text-align: left; font-size: 12px; }
+    .loc-option:hover, .loc-option[aria-selected="true"] { color: #07595d; background: #e5f5ef; }
+    .calendar { padding: 13px 14px 12px; border: 1px solid #dbe7e5; border-radius: 12px; background: rgba(255,255,255,.83); }
+    .cal-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+    .cal-head h2 { margin: 0; color: #21484a; font-size: 14px; }
+    .cal-nav { width: 31px; height: 31px; border: 1px solid #d8e6e3; border-radius: 50%; color: #087e83; background: #fff; font-size: 20px; line-height: 1; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; text-align: center; }
+    .cal-dow { padding: 4px 0 6px; color: #718587; font-size: 10px; font-weight: 800; }
+    .cal-dow.weekend { color: #c64049; }
+    .cal-day { min-height: 35px; border: 0; border-radius: 9px; color: #345153; background: transparent; font-size: 12px; }
+    .cal-day:hover:not(:disabled) { background: #e1f2ec; }
+    .cal-day.today { box-shadow: inset 0 0 0 1px #159b83; font-weight: 800; }
+    .cal-day.selected { color: #fff; background: #087e83; font-weight: 800; }
+    .cal-day:disabled { color: #b4bdbd; background: #f0f2f1; cursor: not-allowed; text-decoration: line-through; }
+    .cal-day:disabled.weekend { color: #c58c91; }
+    .cal-day.weekend:not(:disabled) { color: #c64049; }
+    .calendar-note { margin: 9px 0 0; color: #788a8b; font-size: 10px; }
+    .time-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .check-row { display: flex; flex-wrap: wrap; gap: 10px 17px; margin-top: 4px; }
+    .check { display: inline-flex; align-items: center; gap: 7px; color: #3d5a5b; font-size: 12px; font-weight: 650; }
+    .check input { width: 16px; height: 16px; accent-color: #087e83; }
+    .all-day-hint { min-height: 17px; margin: 7px 0 0; color: #9a541d; font-size: 11px; font-weight: 700; }
+    .form-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 20px; }
+    .btn { min-height: 43px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 17px; border-radius: 10px; font-size: 13px; font-weight: 800; transition: transform .16s ease, filter .16s ease, opacity .16s ease; }
+    .btn:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.03); }
+    .btn:disabled { opacity: .48; cursor: not-allowed; transform: none; }
+    .btn-outline { border: 1px solid rgba(255,255,255,.88); color: white; background: rgba(255,255,255,.08); }
+    .btn-primary { border: 0; color: white; background: linear-gradient(135deg, #f78b3a, #e85b2b); box-shadow: 0 8px 20px rgba(96,37,17,.2); }
+    .form-status { min-height: 18px; margin: 10px 0 0; color: white; text-align: right; font-size: 11px; }
+
+    .map-screen { padding: 12px clamp(8px, 1.5vw, 20px) 20px; color: #e5f2ef; background: #0b1117; min-height: calc(100vh - 64px); }
+    .map-header { max-width: 1500px; margin: 0 auto 13px; }
+    .map-title-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+    .map-title-row h1 { margin: 0 0 7px; color: #f5fcfa; font-size: clamp(20px, 3vw, 29px); letter-spacing: -.03em; }
+    .search-summary { color: #b5c8c7; font-size: 12px; line-height: 1.6; }
+    .text-button { padding: 7px 0; border: 0; color: #ffb064; background: transparent; font-size: 12px; font-weight: 800; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
+    .map-tools { position: sticky; top: 8px; z-index: 18; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; padding: 8px 10px; border: 1px solid rgba(196,220,217,.2); border-radius: 12px; background: rgba(24,38,40,.84); box-shadow: 0 8px 24px #0004; backdrop-filter: blur(14px); }
+    .legend { display: flex; flex-wrap: wrap; align-items: center; gap: 7px 14px; color: #c1d0cf; font-size: 11px; }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .swatch { width: 10px; height: 10px; display: inline-block; border-radius: 3px; }
+    .swatch.available { background: var(--green); }.swatch.booked { background: var(--red); }.swatch.selected { background: var(--blue); }.swatch.unavailable { background: var(--grey); }
+    .count { color: #effff4; font-size: 12px; font-weight: 800; }
+    .map-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+    .tool-btn { min-width: 31px; height: 30px; border: 1px solid rgba(172,202,198,.23); border-radius: 8px; color: #e6f2f0; background: rgba(255,255,255,.055); font-weight: 800; }
+    .tool-btn:hover { background: #2a3c40; }
+    .tool-btn.wide { padding: 0 10px; font-size: 11px; }
+    .layout-select { height: 30px; max-width: 170px; padding: 0 8px; border: 1px solid rgba(172,202,198,.23); border-radius: 8px; color: #e6f2f0; background: #202f32; font-size: 11px; }
+    .visibility-toggle { height: 30px; padding: 0 8px; border: 1px solid rgba(172,202,198,.2); border-radius: 8px; color: #c6d8d5; background: rgba(255,255,255,.04); font-size: 10px; }
+    .visibility-toggle[aria-pressed="false"] { color: #899a9a; background: #11191b; text-decoration: line-through; }
+    .area-toggle { position: relative; }
+    .area-legend { position: absolute; z-index: 15; top: 38px; right: 0; width: 260px; padding: 12px; border: 1px solid #43585a; border-radius: 10px; color: #d8e5e2; background: #182528; box-shadow: 0 10px 28px #0008; font-size: 11px; }
+    .area-legend[hidden] { display: none; }
+    .area-legend h3 { margin: 0 0 9px; font-size: 12px; }
+    .area-legend-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px 10px; }
+    .area-legend-grid span { display: inline-flex; align-items: center; gap: 6px; }
+    .type-dot { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+    .viewport { position: relative; max-width: 1800px; width: 100%; height: min(74vh, 900px); min-height: 380px; margin: 10px auto; overflow: auto; border: 1px solid #27353b; border-radius: 10px; background: #0b1117; scrollbar-color: #536668 #111b1d; touch-action: none; }
+    .floor-svg { display: block; max-width: none; flex: none; user-select: none; }
+    .minimap { position: absolute; z-index: 12; right: 12px; bottom: 12px; width: min(230px, 32vw); aspect-ratio: 3 / 1; overflow: hidden; border: 1px solid rgba(208,228,224,.45); border-radius: 7px; background: rgba(8,15,18,.85); box-shadow: 0 5px 20px #0008; touch-action: none; cursor: crosshair; }
+    .minimap svg { display: block; width: 100%; height: 100%; }
+    .minimap-outline { fill: #112124; stroke: #c4d5d2; stroke-width: 10; }
+    .minimap-zone { fill: #1d5146; stroke: #76a69b; stroke-width: 5; }
+    .minimap-room { fill: #45415d; stroke: #a89dc9; stroke-width: 4; }
+    .minimap-window { fill: none; stroke: #70c3d0; stroke-width: 7; }
+    .minimap-viewport { fill: #65b2ff25; stroke: #69b7ff; stroke-width: 10; cursor: move; }
+    .svg-hide { display: none !important; }
+    .map-bottom { max-width: 1500px; margin: 0 auto; }
+    .selection-bar { min-height: 46px; display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding: 9px 12px; border: 1px solid #335056; border-radius: 10px; color: #c7d8d5; background: #172326; font-size: 11px; line-height: 1.5; }
+    .selection-bar strong { color: #fff; }
+    .bottom-actions { display: flex; justify-content: space-between; gap: 10px; }
+    .bottom-actions .btn-outline { border-color: #607477; color: #ecf6f4; background: #192629; }
+    .map-loading { position: absolute; inset: 0; z-index: 10; display: grid; place-items: center; color: #eaf8f5; background: rgba(7,15,17,.9); font-weight: 800; }
+    .map-loading[hidden] { display: none; }
+    .spinner { width: 20px; height: 20px; display: inline-block; margin-right: 10px; vertical-align: middle; border: 2px solid #658083; border-top-color: #ff963e; border-radius: 50%; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .tooltip { position: fixed; z-index: 30; max-width: 260px; display: none; padding: 9px 11px; border: 1px solid #526467; border-radius: 8px; color: #f0f7f5; background: #152326; box-shadow: 0 10px 22px #0008; pointer-events: none; font-size: 11px; line-height: 1.55; }
+    .tooltip strong { color: #fff; font-size: 12px; }
+    .toast { position: fixed; z-index: 40; right: 18px; bottom: 18px; max-width: min(420px, calc(100vw - 36px)); padding: 12px 15px; border: 1px solid #538673; border-radius: 10px; color: #eafff1; background: #173e33; box-shadow: 0 12px 30px #0006; opacity: 0; transform: translateY(9px); transition: .2s ease; pointer-events: none; font-size: 12px; }
+    .toast.visible { opacity: 1; transform: translateY(0); }
+    dialog { width: min(510px, calc(100vw - 28px)); padding: 0; border: 1px solid #c8d8d4; border-radius: 16px; color: #173436; background: #f8fbfa; box-shadow: 0 24px 80px #0008; }
+    dialog::backdrop { background: #061214b8; backdrop-filter: blur(4px); }
+    .modal-content { padding: 22px; }
+    .modal-content h2 { margin: 0 0 8px; font-size: 22px; }
+    .modal-content p { color: #64797a; font-size: 12px; line-height: 1.5; }
+    .confirm-list { display: grid; grid-template-columns: 130px 1fr; gap: 7px 12px; margin: 16px 0; padding: 13px; border-radius: 10px; background: #eaf3f0; font-size: 12px; }
+    .confirm-list dt { color: #6a7f80; }.confirm-list dd { margin: 0; color: #1c3c3e; font-weight: 750; overflow-wrap: anywhere; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 17px; }
+    .btn-cancel { border: 1px solid #ccd9d7; color: #385253; background: #fff; }
+    .info-card { position: fixed; z-index: 32; right: 16px; bottom: 76px; width: min(320px, calc(100vw - 32px)); padding: 14px; border: 1px solid #506365; border-radius: 11px; color: #dce9e6; background: #142326; box-shadow: 0 12px 30px #0008; }
+    .info-card[hidden] { display: none; }
+    .info-card h3 { margin: 0 0 5px; color: #fff; font-size: 14px; }.info-card p { margin: 0; color: #afc3c0; font-size: 11px; line-height: 1.55; }
+
+    /* Architectural SVG plan, with status kept on individual selectable desks/rooms. */
+    .floor-svg { background: #0b1117; }
+    .plan-bg { fill: #0b1117; }
+    .outer-wall { fill: #263138; stroke: #e8eef5; stroke-width: 11; }
+    .inner-wall { fill: none; stroke: #e8eef5; stroke-width: 7; }
+    .thin-wall { fill: none; stroke: #9daab1; stroke-width: 3; }
+    .window-line { stroke: #72cbd6; stroke-width: 8; }
+    .door-line { fill: none; stroke: #e8eef5; stroke-width: 3; }
+    .glass-wall { fill: none; stroke: #83c6d3; stroke-width: 5; stroke-dasharray: 16 6; }
+    .corridor-fill { fill: #111c23; stroke: #45535d; stroke-width: 2; }
+    .zone-outline { fill: #10302d; fill-opacity: .19; stroke: #64827d; stroke-width: 4; stroke-dasharray: 18 9; }
+    .bench-line { fill: none; stroke: #758c8a; stroke-width: 2; opacity: .62; }
+    .pod-outline { fill: #174138; fill-opacity: .12; stroke: #65817d; stroke-width: 2; opacity: .65; }
+    .zone-title { fill: #f3faf8; font: 750 31px system-ui, sans-serif; letter-spacing: 2px; }
+    .zone-subtitle { fill: #a7babd; font: 20px system-ui, sans-serif; letter-spacing: .5px; }
+    .desk-body { fill: #17242a; stroke: #f0f6f4; stroke-width: 2; }
+    .desk-divider { stroke: #d9e3e1; stroke-width: 1.5; }
+    .chair { fill: #111b1d; stroke: #edf3f1; stroke-width: 2; }
+    .monitor { fill: #273b45; stroke: #b7c8cf; stroke-width: 1.4; }
+    .desk-available .desk-body, .desk-available .chair { stroke: #3ddc84; }
+    .desk-available .desk-body { fill: #13362d; }
+    .desk-booked .desk-body, .desk-booked .chair { stroke: #ff5c6c; }
+    .desk-booked .desk-body { fill: #462329; }
+    .desk-unavailable .desk-body, .desk-unavailable .chair { stroke: #6b7684; }
+    .desk-unavailable .desk-body { fill: #303941; }
+    .desk-selected .desk-body, .desk-selected .chair { stroke: #4da3ff; }
+    .desk-selected .desk-body { fill: #103e65; }
+    .selection-ring { fill: none; stroke: #4da3ff; stroke-width: 4; stroke-dasharray: 8 6; opacity: .8; animation: selectionPulse 1.5s ease-in-out infinite alternate; pointer-events: none; }
+    @keyframes selectionPulse { to { opacity: .25; stroke-width: 2; } }
+    .desk-item, .room-item { cursor: pointer; }
+    .desk-item:focus .desk-body, .room-item:focus .room-shape { stroke: #fff; stroke-width: 4; }
+    .desk-id { fill: #b9e3fb; stroke: #111923; stroke-width: 4px; paint-order: stroke; font: 750 15px ui-monospace, monospace; text-anchor: middle; pointer-events: none; }
+    .desk-ids-hidden .desk-id { display: none; }
+    .small-room-labels-hidden .room-label, .small-room-labels-hidden .room-sub { display: none; }
+    .room-shape { fill: #202a31; stroke: #e8eef5; stroke-width: 4; }
+    .room-work { fill: #17352e; }.room-meeting { fill: #302d42; }.room-amenity { fill: #243335; }.room-service { fill: #282b31; }.room-circulation { fill: #25383d; }.room-cafeteria { fill: #3d3323; }
+    .room-available .room-shape { stroke: #3ddc84; }.room-booked .room-shape { stroke: #ff5c6c; }.room-selected .room-shape { stroke: #4da3ff; stroke-width: 7; }
+    .room-unavailable .room-shape { stroke: #6b7684; }
+    .room-label { fill: #eaf3f6; stroke: #111923; stroke-width: 5px; paint-order: stroke; font: 750 21px system-ui, sans-serif; text-anchor: middle; }
+    .room-sub { fill: #bac9ce; font: 16px system-ui, sans-serif; text-anchor: middle; }
+    .area-card { fill: #131e20; stroke: #77858a; stroke-width: 3; }
+    .area-card.work { fill: #17372f; }.area-card.meeting { fill: #27283e; }.area-card.amenity { fill: #223234; }.area-card.service { fill: #292d32; }.area-card.circulation { fill: #203339; }.area-card.cafeteria { fill: #413320; }
+    .area-label { fill: #f0f6f4; font: 750 20px system-ui, sans-serif; }
+    .area-sub { fill: #b3c1c3; font: 15px system-ui, sans-serif; }
+    .area-click { cursor: pointer; }
+    .area-click:hover .room-shape, .area-click:hover .area-card { stroke: #ffbd67; stroke-width: 6; }
+    .svg-hide { display: none !important; }
+    .map-note { fill: #a5b6bb; font: 15px system-ui, sans-serif; }
+    .map-large-label { fill: #fff; font: 850 30px system-ui, sans-serif; letter-spacing: 1.5px; }
+    .table-shape { fill: #263c3a; stroke: #c5d2cf; stroke-width: 3; }
+    .table-seat { fill: #0b1214; stroke: #91aaa5; stroke-width: 2; }
+    .stairs-line { stroke: #d8e2df; stroke-width: 3; }.lift-cross { stroke: #d8e2df; stroke-width: 4; }
+    .furniture-line { fill: none; stroke: #b4c1c5; stroke-width: 3; }
+    .furniture-fill { fill: #24343c; stroke: #bac7ca; stroke-width: 3; }
+    .grid-fill { fill: url(#grid); }
+    @media (max-width: 740px) {
+      .map-actions { width: 100%; }
+      .layout-select { max-width: 145px; }
+      .visibility-toggle { font-size: 9px; padding: 0 6px; }
+      .minimap { width: min(180px, 45vw); }
+    }
+    @media (max-width: 740px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .form-wrap { padding: 28px 14px; }
+      .form-actions { align-items: stretch; }
+      .form-actions .btn { flex: 1; padding-inline: 10px; }
+      .map-title-row { display: block; }
+      .map-title-row .text-button { display: inline-block; margin-top: 7px; }
+      .map-tools { align-items: flex-start; }
+      .legend { width: 100%; }
+      .viewport { height: 62vh; min-height: 330px; }
+      .selection-bar { align-items: flex-start; }
+      .bottom-actions .btn { flex: 1; }
+      .confirm-list { grid-template-columns: 105px 1fr; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">FLEXDESK</div>
+      <div class="subbrand">Workspace booking</div>
+      <div class="step-chip" id="stepChip">Select workspace</div>
+    </header>
+
+    <main>
+      <section id="formScreen" class="screen active" aria-labelledby="formTitle">
+        <div class="form-wrap">
+          <div class="heading">
+            <div class="eyebrow">HOT DESK BOOKING</div>
+            <h1 id="formTitle">Select Your Workspace</h1>
+            <p>Choose a location, floor, bay, and time. We’ll show a live mock availability map for your search.</p>
+          </div>
+          <form id="bookingForm" novalidate>
+            <div class="form-grid">
+              <section class="glass-card" aria-label="Location and date">
+                <div class="field" id="locationField">
+                  <label for="locationSearch">Location</label>
+                  <input id="locationSearch" class="search-input" type="text" role="combobox" aria-autocomplete="list" aria-controls="locationOptions" aria-expanded="false" placeholder="Search or select a location" autocomplete="off">
+                  <div id="locationOptions" class="loc-options" role="listbox" hidden></div>
+                  <p id="locationError" class="error" aria-live="polite"></p>
+                </div>
+                <div class="field">
+                  <label for="baySelect">Bay</label>
+                  <select id="baySelect" disabled><option value="">Choose a floor first</option></select>
+                  <p id="bayError" class="error" aria-live="polite"></p>
+                </div>
+                <div class="field">
+                  <span class="field-label">Date</span>
+                  <div class="calendar" id="calendar" aria-label="Choose booking date"></div>
+                  <p id="dateError" class="error" aria-live="polite"></p>
+                </div>
+              </section>
+
+              <section class="glass-card" aria-label="Floor, type, and booking time">
+                <div class="field">
+                  <label for="floorSelect">Floor</label>
+                  <select id="floorSelect" disabled><option value="">Choose a location first</option></select>
+                  <p id="floorError" class="error" aria-live="polite"></p>
+                </div>
+                <div class="field">
+                  <label for="typeSelect">Booking Type</label>
+                  <select id="typeSelect">
+                    <option value="Desk">Desk</option>
+                    <option value="Meeting Room">Meeting Room</option>
+                    <option value="Focus Room">Focus Room</option>
+                  </select>
+                  <p id="typeError" class="error" aria-live="polite"></p>
+                </div>
+                <div class="field">
+                  <span class="field-label">Time</span>
+                  <div class="time-grid">
+                    <div>
+                      <label for="fromTime">From</label>
+                      <select id="fromTime"></select>
+                    </div>
+                    <div>
+                      <label for="toTime">To</label>
+                      <select id="toTime"></select>
+                    </div>
+                  </div>
+                  <p id="timeError" class="error" aria-live="polite"></p>
+                </div>
+                <div class="field">
+                  <span class="field-label">Booking options</span>
+                  <div class="check-row">
+                    <label class="check"><input type="checkbox" id="allDay"> All Day</label>
+                    <label class="check"><input type="checkbox" id="lunch"> Require Lunch</label>
+                    <label class="check"><input type="checkbox" id="snacks"> Require Snacks</label>
+                  </div>
+                  <p class="all-day-hint" id="allDayHint" aria-live="polite"></p>
+                  <p class="help">Add-ons are included with your booking request.</p>
+                </div>
+              </section>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-outline" type="button" id="formBack">← Back</button>
+              <button class="btn btn-primary" type="submit" id="checkAvailability" disabled>✓ Check Availability</button>
+            </div>
+            <p class="form-status" id="formStatus" aria-live="polite">Select a location, floor, and bay to continue.</p>
+          </form>
+        </div>
+      </section>
+
+      <section id="mapScreen" class="screen" aria-labelledby="mapTitle">
+        <div class="map-screen">
+          <div class="map-header">
+            <div class="map-title-row">
+              <div>
+                <h1 id="mapTitle">Floor availability</h1>
+                <div id="searchSummary" class="search-summary"></div>
+              </div>
+              <button class="text-button" id="editSearch" type="button">Edit search</button>
+            </div>
+            <div class="map-tools">
+              <div class="legend" aria-label="Desk availability legend">
+                <span><i class="swatch available"></i> Available</span>
+                <span><i class="swatch booked"></i> Booked</span>
+                <span><i class="swatch selected"></i> Selected</span>
+                <span><i class="swatch unavailable"></i> Unavailable / Blocked</span>
+              </div>
+              <div class="count" id="availabilityCount" aria-live="polite"></div>
+              <div class="map-actions" aria-label="Map controls">
+                <button class="tool-btn" type="button" id="zoomOut" aria-label="Zoom out">−</button>
+                <button class="tool-btn" type="button" id="zoomIn" aria-label="Zoom in">+</button>
+                <button class="tool-btn wide" type="button" id="resetView">Reset</button>
+                <button class="tool-btn wide" type="button" id="fitWidth">Fit width</button>
+                <select id="layoutSelect" class="layout-select" aria-label="Floor-plan arrangement">
+                  <option value="layout-a">Layout 1 · West cafeteria</option>
+                  <option value="layout-b">Layout 2 · East cafeteria</option>
+                </select>
+                <div class="area-toggle">
+                  <button class="tool-btn wide" type="button" id="areaLegendToggle" aria-expanded="false">Area types ▾</button>
+                  <div class="area-legend" id="areaLegend" hidden>
+                    <h3>Area types</h3>
+                    <div class="area-legend-grid">
+                      <span><i class="type-dot" style="background:#1a4336"></i> Work areas</span>
+                      <span><i class="type-dot" style="background:#37334f"></i> Meeting areas</span>
+                      <span><i class="type-dot" style="background:#354448"></i> Amenities</span>
+                      <span><i class="type-dot" style="background:#414449"></i> Services / technical</span>
+                      <span><i class="type-dot" style="background:#30464d"></i> Circulation</span>
+                    </div>
+                  </div>
+                </div>
+                <button class="visibility-toggle" type="button" data-layer="desks" aria-pressed="true">Desks</button>
+                <button class="visibility-toggle" type="button" data-layer="meeting" aria-pressed="true">Meeting Rooms</button>
+                <button class="visibility-toggle" type="button" data-layer="amenity" aria-pressed="true">Amenities</button>
+                <button class="visibility-toggle" type="button" data-layer="service" aria-pressed="true">Services</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="mapViewport" class="viewport" aria-label="Scrollable floor map. Drag the map to pan; use plus and minus to zoom.">
+            <div id="mapLoading" class="map-loading" hidden><div><i class="spinner"></i>Checking mock availability…</div></div>
+            <svg id="floorPlan" class="floor-svg" role="group" aria-label="Interactive CAD-style office floor plan"></svg>
+            <div class="minimap" id="minimap" aria-label="Floor-plan minimap; drag the blue window to pan">
+              <svg id="minimapSvg" viewBox="0 0 4800 1600" role="img" aria-label="Minimap"></svg>
+            </div>
+          </div>
+          <div class="map-bottom">
+            <div class="selection-bar" id="selectionSummary" aria-live="polite"><strong>No workspaces selected.</strong> Choose an available desk or room.</div>
+            <div class="bottom-actions">
+              <button class="btn btn-outline" type="button" id="mapBack">← Back</button>
+              <button class="btn btn-primary" type="button" id="bookNow" disabled>Book Now</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="tooltip" class="tooltip" role="tooltip" aria-hidden="true"></div>
+  <aside id="infoCard" class="info-card" aria-live="polite" hidden>
+    <h3 id="infoTitle"></h3><p id="infoText"></p>
+  </aside>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <dialog id="confirmDialog" aria-labelledby="confirmTitle">
+    <div class="modal-content">
+      <h2 id="confirmTitle">Confirm booking</h2>
+      <p>Review your mock booking details before confirming.</p>
+      <dl class="confirm-list" id="confirmDetails"></dl>
+      <div class="modal-actions">
+        <button class="btn btn-cancel" type="button" id="cancelBooking">Cancel</button>
+        <button class="btn btn-primary" type="button" id="confirmBooking">Confirm booking</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script>
+    "use strict";
+
+    // Extend the location, floor, bay, and layout configuration here.
+    const LOCATIONS = [
+      "Bengaluru", "Chennai- Olympia Pinnacle", "Goa- Bhaskar", "Goa- Charak",
+      "Gurugram - DLF Cybercity", "Hyderabad - Equinox", "Hyderabad - Waverock",
+      "Hyderabad- Argus Block", "Indore - Brilliant Centre", "Jaipur - Fort Anandam",
+      "Kochi- Nippon Q1", "Kolkata - Godrej Genesis", "Mumbai - Time Square",
+      "Nagpur - Gargi", "Nagpur - Maitreyi", "Noida- Logix Cyber Park",
+      "Pune - Aryabhata", "Pune - Bhageerath", "Pune - HJ-Atharvaveda",
+      "Pune - HJ-Rgveda", "Pune - HJ-Samaveda", "Pune - HJ-Yajurveda",
+      "Pune - Pingala", "Pune - Ramanujan"
+    ];
+    const FLOOR_CONFIG = {
+      "Bengaluru": ["Hebbal - 6th floor", "Prestige Shantiniketan-12th floor", "Pritech Park-5th floor"],
+      "Chennai- Olympia Pinnacle": ["5th floor"],
+      "Goa- Bhaskar": ["B2 FE (First East)", "B2 FN (First North)", "B2 FW (First West)", "B2 SE (Second East)", "B2 SN (Second North)", "B2 SS (Second South)", "B2 SW (Second West)"],
+      "Goa- Charak": ["B1FE (First East)", "B1FN (First North)", "B1FS (First South)", "B1FW (First West)", "B1GE (Ground East)", "B1GW (Ground West)", "B1SE (Second East)", "B1SN (Second North)", "B1SS (Second South)", "B1SW (Second West)"],
+      "Gurugram - DLF Cybercity": ["18th Floor"],
+      "Hyderabad - Equinox": ["3rd Floor"],
+      "Hyderabad - Waverock": ["Floor 11", "Floor 12"],
+      "Hyderabad- Argus Block": ["6th Floor- A Wing", "6th Floor- B Wing", "6th Floor- C Wing"],
+      "Indore - Brilliant Centre": ["4th Floor"],
+      "Jaipur - Fort Anandam": ["5th Floor"],
+      "Kochi- Nippon Q1": ["10th Floor"],
+      "Kolkata - Godrej Genesis": ["7th Floor"],
+      "Mumbai - Time Square": ["12th Floor"],
+      "Nagpur - Gargi": ["G0", "G1", "G2", "G3", "G4"],
+      "Nagpur - Maitreyi": ["M 0", "M 2", "M 3", "M 4", "M 5", "M 6"],
+      "Noida- Logix Cyber Park": ["4th floor"],
+      "Pune - Aryabhata": ["Floor 1", "Floor 2", "Floor 3", "Floor 4", "Floor 5", "Floor 6"],
+      "Pune - Bhageerath": ["Floor 1", "Floor 2", "Floor 3", "Floor 4", "Floor 5"],
+      "Pune - HJ-Atharvaveda": ["Floor A1", "Floor A2", "Floor A3", "Floor A4", "Floor A5", "Floor A6"],
+      "Pune - HJ-Rgveda": ["Rgveda E1", "Rgveda E2", "Rgveda E3", "Rgveda E4", "Rgveda E5", "Rgveda E6"],
+      "Pune - HJ-Samaveda": ["Floor B0", "Floor B2", "Floor B3", "Floor B4", "Floor B5", "Floor B6"],
+      "Pune - HJ-Yajurveda": ["Floor D1"],
+      "Pune - Pingala": ["Floor 1", "Floor 2", "Floor 3", "Floor 4", "Floor 5", "Floor 6"],
+      "Pune - Ramanujan": ["1st Floor", "2nd Floor", "3rd Floor", "Ground Floor"]
+    };
+    const DEFAULT_BAYS = ["Open Area", "Meeting Area", "Focus Room"];
+    const BAY_CONFIG = {
+      "Hyderabad - Equinox|3rd Floor": ["Meeting Area", "ODC 1", "ODC 2", "ODC 3", "Open Area", "Meeting Room", "Focus Room"],
+      "Hyderabad - Waverock|Floor 11": ["Blue Wing", "Magenta Wing", "Orange Wing", "Reception", ...DEFAULT_BAYS],
+      "Hyderabad - Waverock|Floor 12": ["ODC IBM", "ODC VOVO", "ODC MS", "Open Area", "Meeting Area", "Focus Room"],
+      "Indore - Brilliant Centre|4th Floor": ["Open Area", "4th Floor Meeting Area", "Meeting Area", "Meeting Room", "Focus Room"],
+      "Kochi- Nippon Q1|10th Floor": ["Open Area", "Meetin Room", "Meeting Room", "Focus Room"],
+      "Kolkata - Godrej Genesis|7th Floor": ["Open Area", "Meeting Area", "Meeting Room", "Focus Room"],
+      "Mumbai - Time Square|12th Floor": ["Open Area", "Meeting Room", "Board Room", "Focus Room"],
+      "Pune - Aryabhata|Floor 2": ["Open Area", "Meeting Area", "Focus Room", "Meeting Room"],
+      "Pune - Bhageerath|Floor 1": ["Block A", ...DEFAULT_BAYS]
+    };
+    const HOLIDAYS = new Set([
+      "2026-01-01", "2026-01-26", "2026-03-04", "2026-08-15", "2026-10-02",
+      "2026-10-20", "2026-11-08", "2026-12-25", "2027-01-01"
+    ]);
+    const MAX_DESK_SELECTION = 1;
+    const PLAN_WIDTH = 4800;
+    const PLAN_HEIGHT = 1600;
+    const AREA_DEFS = [
+      { id: "reception", name: "Reception", type: "amenity", desc: "Visitor check-in and reception counter." },
+      { id: "waiting", name: "Waiting Area", type: "amenity", capacity: 12, desc: "Visitor seating area, capacity 12." },
+      { id: "open", name: "Open Workspace / Hot Desk Area", type: "work", desc: "Six individually selectable desk zones with 200 work seats." },
+      { id: "cabins", name: "Manager Cabins · A1 / A2 / A3 / Executive", type: "work", capacity: 1, desc: "Enclosed administrative and manager offices." },
+      { id: "meeting", name: "Meeting Rooms · AGNI / AZURE / ABHYAS / ALPHA / ANALOG", type: "meeting", capacity: 8, desc: "Distributed named meeting rooms with varying capacities." },
+      { id: "conference", name: "Conference Room", type: "meeting", capacity: 18, desc: "Conference suite with seating for 18." },
+      { id: "focus", name: "Focus Rooms A-01 / A-02 / A-03 / A-04", type: "work", capacity: 2, desc: "Distributed acoustic focus rooms, each for up to two people." },
+      { id: "collab", name: "Collaboration · OPEN INFORMAL MEETING - R4", type: "meeting", capacity: 8, desc: "Informal collaboration area, capacity 8." },
+      { id: "cafeteria", name: "CAFETERIA - 155 SEATING", type: "amenity", capacity: 155, desc: "Cafeteria with 155 seats and four-seat tables." },
+      { id: "pantry", name: "Pantry · Dish Wash · Preparation Area", type: "amenity", desc: "Pantry with dish-wash and food preparation areas." },
+      { id: "washrooms", name: "Washrooms · Male / Female / Universal / Janitor", type: "amenity", desc: "Male, female, universal and janitor washroom facilities." },
+      { id: "shower", name: "Shower Room", type: "amenity", desc: "Shower and changing room." },
+      { id: "lockers", name: "Locker Area", type: "amenity", capacity: 40, desc: "Personal lockers, capacity 40." },
+      { id: "stationery", name: "Stationery Area", type: "service", desc: "Stationery and office supplies." },
+      { id: "printing", name: "Printing Area", type: "service", desc: "Shared printers and document finishing." },
+      { id: "it", name: "IT Support Area", type: "service", desc: "IT help desk and equipment support." },
+      { id: "server", name: "Server Room", type: "service", desc: "Restricted-access server room." },
+      { id: "network", name: "Network Room", type: "service", desc: "Network racks, patch panels and equipment cabinets." },
+      { id: "store", name: "Store Room", type: "service", desc: "General office storage." },
+      { id: "electrical", name: "Electrical Room · DB UNIT", type: "service", desc: "Electrical distribution board (DB) room." },
+      { id: "security", name: "Security Room", type: "service", desc: "Security operations and monitoring room." },
+      { id: "firstaid", name: "First Aid / Medical Room", type: "amenity", desc: "First-aid and private medical room." },
+      { id: "recreation", name: "Recreation / Play Zone", type: "amenity", desc: "Recreation and play area." },
+      { id: "lounge", name: "Lounge / Breakout Area", type: "amenity", capacity: 16, desc: "Casual lounge and breakout seating, capacity 16." },
+      { id: "lifts", name: "Lift / Elevator · Passenger / Service / Lobby", type: "circulation", desc: "Passenger lifts, service lift and lift lobby." },
+      { id: "stairs", name: "Staircase · UP / DN", type: "circulation", desc: "Fire-rated staircase with up/down route." },
+      { id: "fire", name: "Fire Exit", type: "circulation", desc: "Marked emergency fire-exit route." },
+      { id: "parking", name: "Parking Area · Entrance", type: "circulation", desc: "Parking is outside this floor. Follow the parking entrance signs." },
+      { id: "housekeeping", name: "Housekeeping / Maintenance Room", type: "service", desc: "Housekeeping and maintenance storage." },
+      { id: "training", name: "Training Room", type: "meeting", capacity: 24, desc: "Flexible training space with capacity 24." },
+      { id: "wellness", name: "Prayer / Wellness Room", type: "amenity", desc: "Quiet prayer and wellness room." },
+      { id: "ahu", name: "AHU", type: "service", desc: "Air-handling unit / mechanical room." },
+      { id: "corridor", name: "WIDE CORRIDOR", type: "circulation", desc: "Main circulation corridor." },
+      { id: "handwash", name: "HAND WASH", type: "amenity", desc: "Shared hand-wash counter." }
+    ];
+    const room = (id, name, type, capacity, x, y, w, h, kind, areaId, detail = "") => ({
+      id, name, type, capacity, x, y, w, h, kind, areaId, detail
+    });
+    const FLOOR_LAYOUT_CONFIG = {
+      "layout-a": {
+        width: PLAN_WIDTH, height: PLAN_HEIGHT, variant: "West cafeteria · A", mirror: false,
+        zones: [
+          { prefix: "A", name: "WORK ZONE A · BENCH ROWS", count: 40, cols: 10, x: 95, y: 390, stepX: 80, stepY: 85, arrangement: "benches", tint: "work" },
+          { prefix: "B", name: "WORK ZONE B · 2 × 2 PODS", count: 40, cols: 10, x: 3360, y: 390, stepX: 80, stepY: 85, arrangement: "pods", tint: "work" },
+          { prefix: "C", name: "WORK ZONE C · ANGLED PAIRS", count: 40, cols: 10, x: 3360, y: 1040, stepX: 80, stepY: 85, arrangement: "angled-pairs", tint: "work" },
+          { prefix: "D", name: "WORK ZONE D · BACK-TO-BACK", count: 40, cols: 8, x: 915, y: 380, stepX: 65, stepY: 65, arrangement: "back-to-back", tint: "work" },
+          { prefix: "H", name: "HOT DESK · FLEXIBLE MIXED SEATING", count: 24, cols: 6, x: 1650, y: 990, stepX: 78, stepY: 72, arrangement: "mixed", tint: "work" },
+          { prefix: "W", name: "WINDOW SEATING", count: 16, cols: 6, x: 4200, y: 1040, stepX: 70, stepY: 80, arrangement: "window", tint: "work" }
+        ],
+        rooms: [
+          room("CAFETERIA", "CAFETERIA / DINING · 100 SEATS", "Amenity", 100, 75, 80, 800, 270, "cafeteria", "cafeteria", "4-person and 6-person tables"),
+          room("PANTRY-KITCHEN", "PANTRY / KITCHEN", "Amenity", 0, 890, 80, 340, 130, "kitchen", "pantry", "Preparation · dish wash · refrigerator"),
+          room("AGNI", "MEETING ROOM AGNI", "Meeting Room", 6, 1250, 80, 250, 185, "meeting", "meeting", "6 people"),
+          room("AZURE", "MEETING ROOM AZURE", "Meeting Room", 8, 1500, 80, 250, 185, "meeting", "meeting", "8 people"),
+          room("ABHYAS", "MEETING ROOM ABHYAS", "Meeting Room", 10, 1750, 80, 270, 185, "meeting", "meeting", "10 people"),
+          room("IT-SUPPORT", "IT SUPPORT AREA", "Service", 0, 75, 1110, 270, 170, "it", "it"),
+          room("SERVER-ROOM", "SERVER ROOM", "Service", 0, 75, 1280, 270, 145, "racks", "server", "Restricted access"),
+          room("NETWORK-ROOM", "NETWORK ROOM", "Service", 0, 75, 1425, 270, 105, "racks", "network", "Patch panels"),
+          room("FOCUS-A-01", "FOCUS ROOM A-01", "Focus Room", 2, 370, 1100, 130, 110, "focus", "focus", "Quiet pod"),
+          room("COLLAB-R4", "OPEN INFORMAL MEETING · R4", "Meeting Room", 8, 520, 1040, 350, 200, "lounge", "collab", "Open collaboration"),
+          room("RECREATION", "RECREATION / PLAY ZONE", "Amenity", 0, 880, 1040, 310, 200, "recreation", "recreation", "Ping-pong · foosball"),
+          room("LOUNGE", "LOUNGE / BREAKOUT", "Amenity", 0, 1200, 1040, 245, 200, "lounge", "lounge", "Sofas · coffee tables"),
+          room("STATIONERY", "STATIONERY POINT", "Service", 0, 370, 1250, 170, 125, "shelves", "stationery"),
+          room("FIRST-AID", "FIRST AID / MEDICAL", "Amenity", 0, 560, 1250, 180, 125, "medical", "firstaid"),
+          room("PRAYER", "PRAYER / WELLNESS", "Amenity", 0, 760, 1250, 190, 125, "wellness", "wellness"),
+          room("LOCKERS-W", "LOCKER AREA", "Amenity", 0, 970, 1250, 250, 125, "lockers", "lockers", "Near Work Zone A"),
+          room("MAINTENANCE", "HOUSEKEEPING / MAINTENANCE", "Service", 0, 1240, 1250, 205, 125, "cleaning", "housekeeping"),
+          room("SECURITY", "SECURITY ROOM", "Service", 0, 1320, 290, 180, 100, "security", "security", "Access control"),
+          room("FOCUS-A-02", "FOCUS ROOM A-02", "Focus Room", 2, 1500, 290, 130, 110, "focus", "focus", "Acoustic pod"),
+          room("ANALOG", "MEETING ROOM ANALOG", "Meeting Room", 8, 1640, 80, 250, 185, "meeting", "meeting", "8 people"),
+          room("ALPHA", "MEETING ROOM ALPHA", "Meeting Room", 8, 1890, 80, 250, 185, "meeting", "meeting", "8 people"),
+          room("CONF-01", "CONFERENCE ROOM", "Meeting Room", 20, 2145, 80, 350, 185, "conference", "conference", "20 seats · display wall"),
+          room("VC-ROOM", "VIDEO CONFERENCE ROOM", "Meeting Room", 10, 2505, 80, 260, 185, "meeting", "meeting", "Camera · display"),
+          room("TRAINING", "TRAINING ROOM", "Meeting Room", 30, 2780, 80, 450, 250, "training", "training", "Classroom · 30 people"),
+          room("WASH-MALE", "MALE WASHROOM", "Amenity", 0, 1540, 530, 230, 170, "washroom", "washrooms", "Cubicles · basins"),
+          room("WASH-FEMALE", "FEMALE WASHROOM", "Amenity", 0, 1780, 530, 230, 170, "washroom", "washrooms", "Cubicles · basins"),
+          room("WASH-UNIVERSAL", "UNIVERSAL / ACCESSIBLE WC", "Amenity", 0, 1540, 700, 165, 130, "washroom", "washrooms", "Accessible"),
+          room("JANITOR", "JANITOR ROOM", "Service", 0, 1715, 700, 145, 130, "cleaning", "washrooms", "Mop sink"),
+          room("SHOWER", "SHOWER / CHANGING", "Amenity", 0, 1870, 700, 220, 130, "shower", "shower", "Cubicles · benches"),
+          room("LIFT-LOBBY", "LIFT LOBBY · PASSENGER 1–4 + SERVICE", "Circulation", 0, 2150, 420, 510, 290, "lift-lobby", "lifts", "Four passenger lifts and service lift"),
+          room("STAIR-NW", "STAIRCASE · UP / DN", "Circulation", 0, 2030, 420, 110, 160, "stairs", "stairs", "North-west fire stair"),
+          room("STAIR-SE", "STAIRCASE · UP / DN", "Circulation", 0, 2690, 530, 125, 175, "stairs", "stairs", "South-east fire stair"),
+          room("RECEPTION", "RECEPTION", "Amenity", 0, 2180, 1280, 320, 150, "reception", "reception", "Main entrance"),
+          room("WAITING-W", "WAITING AREA · WEST", "Amenity", 0, 1870, 1280, 145, 150, "lounge", "waiting", "Visitor seating"),
+          room("WAITING-E", "WAITING AREA · EAST", "Amenity", 0, 2510, 1280, 150, 150, "lounge", "waiting", "Visitor seating"),
+          room("ELECTRICAL", "ELECTRICAL ROOM · DB UNIT", "Service", 0, 2820, 580, 205, 135, "electrical", "electrical", "Distribution panels"),
+          room("STORE", "STORE ROOM", "Service", 0, 2820, 720, 205, 135, "shelves", "store", "Shelving · supplies"),
+          room("PRINT-B", "PRINTING POINT · ZONE B", "Service", 0, 3035, 580, 180, 115, "printer", "printing"),
+          room("PRINT-C", "PRINT / STATIONERY · ZONE C", "Service", 0, 3035, 700, 180, 115, "printer", "printing"),
+          room("CABIN-A1", "MANAGER CABIN A1", "Amenity", 1, 3670, 80, 210, 150, "cabin", "cabins", "Manager office"),
+          room("CABIN-A2", "MANAGER CABIN A2", "Amenity", 1, 3885, 80, 210, 150, "cabin", "cabins", "Manager office"),
+          room("CABIN-A3", "MANAGER CABIN A3", "Amenity", 1, 4100, 80, 210, 150, "cabin", "cabins", "Manager office"),
+          room("EXEC-CABIN", "EXECUTIVE CABIN", "Amenity", 1, 4315, 80, 210, 150, "cabin", "cabins", "Executive office"),
+          room("HR-ROOM", "HR ROOM", "Amenity", 0, 4320, 250, 200, 140, "cabin", "cabins", "Human resources"),
+          room("FINANCE-ROOM", "FINANCE ROOM", "Amenity", 0, 4320, 400, 200, 140, "cabin", "cabins", "Finance"),
+          room("ADMIN-ROOM", "ADMIN ROOM", "Amenity", 0, 4320, 550, 200, 140, "cabin", "cabins", "Administration"),
+          room("FOCUS-A-03", "FOCUS ROOM A-03", "Focus Room", 2, 4320, 700, 160, 115, "focus", "focus", "Acoustic pod"),
+          room("FOCUS-A-04", "FOCUS ROOM A-04", "Focus Room", 2, 4320, 825, 160, 115, "focus", "focus", "Acoustic pod"),
+          room("AHU", "AHU / MECHANICAL", "Service", 0, 2820, 870, 205, 115, "mechanical", "ahu", "Air handling"),
+          room("HANDWASH", "HAND WASH", "Amenity", 0, 3035, 825, 180, 105, "basins", "handwash", "Shared wash counter"),
+          room("FIRE-EXIT-W", "FIRE EXIT · WEST", "Circulation", 0, 75, 730, 145, 105, "exit", "fire"),
+          room("FIRE-EXIT-E", "FIRE EXIT · EAST", "Circulation", 0, 4580, 730, 145, 105, "exit", "fire"),
+          room("PARKING-ACCESS", "PARKING → BASEMENT", "Circulation", 0, 2550, 1435, 310, 70, "direction", "parking", "External directional label")
+        ]
+      },
+      "layout-b": { mirror: true, variant: "East cafeteria · B" }
+    };
+    const state = {
+      location: "", floor: "", bay: "", bookingType: "Desk", date: localDate(new Date()),
+      from: "09:00", to: "17:00", allDay: false, lunch: false, snacks: false,
+      searchTouched: false, attempted: false, selected: new Set(), availability: new Map(), bookedSlots: new Map(),
+      calendarMonth: new Date(), layout: null, zoom: .25, bookings: [], layoutId: "",
+      layers: { desks: true, meeting: true, amenity: true, service: true }
+    };
+    const $ = (selector) => document.querySelector(selector);
+    const formScreen = $("#formScreen"), mapScreen = $("#mapScreen");
+    const locationInput = $("#locationSearch"), locationOptions = $("#locationOptions");
+    const floorSelect = $("#floorSelect"), baySelect = $("#baySelect");
+    const fromSelect = $("#fromTime"), toSelect = $("#toTime");
+    const form = $("#bookingForm"), plan = $("#floorPlan"), viewport = $("#mapViewport");
+    let toastTimer = 0, locationActiveIndex = -1, panPointer = null, pointers = new Map(), pinchDistance = null;
+
+    function localDate(date) {
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    }
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+    }
+    function delay(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
+    function timeOptions() {
+      return Array.from({ length: 96 }, (_, index) => {
+        const hour = String(Math.floor(index / 4)).padStart(2, "0");
+        const minute = String((index % 4) * 15).padStart(2, "0");
+        return `${hour}:${minute}`;
+      });
+    }
+    function fillTimeSelect(select, selected) {
+      select.innerHTML = timeOptions().map((time) => `<option value="${time}" ${time === selected ? "selected" : ""}>${time}</option>`).join("");
+    }
+    function fillSelect(select, values, prompt) {
+      select.innerHTML = `<option value="">${escapeHtml(prompt)}</option>` + values.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join("");
+    }
+    function chooseLocation(name) {
+      state.location = name;
+      state.floor = "";
+      state.bay = "";
+      locationInput.value = name;
+      closeLocationOptions();
+      const floors = getFloorsForLocation(name);
+      fillSelect(floorSelect, floors, "Select a floor");
+      floorSelect.disabled = false;
+      fillSelect(baySelect, [], "Choose a floor first");
+      baySelect.disabled = true;
+      state.searchTouched = true;
+      updateValidation();
+    }
+    function renderLocationOptions(filter = "") {
+      const matches = LOCATIONS.filter((name) => name.toLocaleLowerCase().includes(filter.trim().toLocaleLowerCase()));
+      locationOptions.innerHTML = matches.length ? matches.map((name, index) =>
+        `<button type="button" class="loc-option" role="option" aria-selected="${index === locationActiveIndex}" data-location="${escapeHtml(name)}">${escapeHtml(name)}</button>`
+      ).join("") : `<div class="help" style="padding:8px 10px">No matching locations.</div>`;
+      locationOptions.hidden = false;
+      locationInput.setAttribute("aria-expanded", "true");
+      locationOptions.querySelectorAll("[data-location]").forEach((option) => {
+        option.addEventListener("mousedown", (event) => event.preventDefault());
+        option.addEventListener("click", () => chooseLocation(option.dataset.location));
+      });
+    }
+    function closeLocationOptions() {
+      locationOptions.hidden = true;
+      locationInput.setAttribute("aria-expanded", "false");
+      locationActiveIndex = -1;
+    }
+    function handleLocationInput() {
+      const typed = locationInput.value.trim();
+      state.searchTouched = true;
+      const exact = LOCATIONS.find((name) => name.toLocaleLowerCase() === typed.toLocaleLowerCase());
+      if (exact) chooseLocation(exact);
+      else {
+        state.location = "";
+        state.floor = "";
+        state.bay = "";
+        floorSelect.disabled = true;
+        baySelect.disabled = true;
+        fillSelect(floorSelect, [], "Choose a location first");
+        fillSelect(baySelect, [], "Choose a floor first");
+        locationActiveIndex = -1;
+        renderLocationOptions(typed);
+        updateValidation();
+      }
+    }
+    function getFloorsForLocation(location) {
+      return FLOOR_CONFIG[location] || [];
+    }
+    function getBaysForFloor(location, floor) {
+      return BAY_CONFIG[`${location}|${floor}`] || DEFAULT_BAYS;
+    }
+    function validDate(value) {
+      if (!value) return false;
+      const date = new Date(`${value}T00:00:00`);
+      const today = localDate(new Date());
+      return value >= today && date.getDay() !== 0 && date.getDay() !== 6 && !HOLIDAYS.has(value);
+    }
+    function timeRangeValid() {
+      if (state.allDay) return true;
+      return Boolean(fromSelect.value && toSelect.value && toSelect.value > fromSelect.value);
+    }
+    function showValidation() {
+      const visible = state.attempted || state.searchTouched;
+      $("#locationError").textContent = visible && !state.location ? "Choose a location from the list." : "";
+      $("#floorError").textContent = visible && !state.floor ? "Choose a floor for this location." : "";
+      $("#bayError").textContent = visible && !state.bay ? "Choose a bay for this floor." : "";
+      $("#typeError").textContent = visible && !state.bookingType ? "Choose a booking type." : "";
+      $("#dateError").textContent = visible && !validDate(state.date) ? "Choose a future weekday that is not a holiday." : "";
+      $("#timeError").textContent = visible && !timeRangeValid() ? "End time must be later than the start time." : "";
+    }
+    function formIsValid() {
+      return Boolean(state.location && state.floor && state.bay && state.bookingType && validDate(state.date) && timeRangeValid());
+    }
+    function updateValidation() {
+      state.floor = floorSelect.value;
+      state.bay = baySelect.value;
+      state.bookingType = $("#typeSelect").value;
+      state.from = fromSelect.value;
+      state.to = toSelect.value;
+      state.allDay = $("#allDay").checked;
+      state.lunch = $("#lunch").checked;
+      state.snacks = $("#snacks").checked;
+      fromSelect.disabled = state.allDay;
+      toSelect.disabled = state.allDay;
+      $("#allDayHint").textContent = state.allDay && state.date === localDate(new Date())
+        ? `For today, all-day booking starts at the current time (${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}).`
+        : "";
+      $("#checkAvailability").disabled = !formIsValid();
+      $("#formStatus").textContent = formIsValid()
+        ? "Search is ready. Check availability to view the floor map."
+        : "Complete the required fields to check availability.";
+      showValidation();
+    }
+    function renderCalendar() {
+      const calendar = $("#calendar");
+      const month = state.calendarMonth;
+      const year = month.getFullYear(), monthIndex = month.getMonth();
+      const firstDay = new Date(year, monthIndex, 1).getDay();
+      const days = new Date(year, monthIndex + 1, 0).getDate();
+      const monthTitle = month.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+      const initial = `<div class="cal-head"><button type="button" class="cal-nav" id="calPrev" aria-label="Previous month">‹</button><h2>${monthTitle}</h2><button type="button" class="cal-nav" id="calNext" aria-label="Next month">›</button></div><div class="cal-grid" role="grid" aria-label="${monthTitle}"><span class="cal-dow weekend">Su</span><span class="cal-dow">Mo</span><span class="cal-dow">Tu</span><span class="cal-dow">We</span><span class="cal-dow">Th</span><span class="cal-dow">Fr</span><span class="cal-dow weekend">Sa</span>`;
+      let cells = "<span></span>".repeat(firstDay);
+      const today = localDate(new Date());
+      for (let day = 1; day <= days; day++) {
+        const dateValue = `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        const dateObj = new Date(year, monthIndex, day);
+        const weekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
+        const disabled = !validDate(dateValue);
+        const classes = ["cal-day", weekend ? "weekend" : "", dateValue === today ? "today" : "", dateValue === state.date ? "selected" : ""].filter(Boolean).join(" ");
+        cells += `<button type="button" class="${classes}" role="gridcell" data-date="${dateValue}" aria-label="${dateObj.toLocaleDateString()}" aria-pressed="${dateValue === state.date}" ${disabled ? "disabled" : ""}>${day}</button>`;
+      }
+      calendar.innerHTML = `${initial}${cells}</div><p class="calendar-note">Weekends, past dates, and configured holidays are unavailable.</p>`;
+      $("#calPrev").addEventListener("click", () => shiftCalendar(-1));
+      $("#calNext").addEventListener("click", () => shiftCalendar(1));
+      calendar.querySelectorAll("[data-date]").forEach((button) => button.addEventListener("click", () => {
+        state.date = button.dataset.date;
+        state.calendarMonth = new Date(`${state.date}T00:00:00`);
+        renderCalendar();
+        updateValidation();
+      }));
+    }
+    function shiftCalendar(offset) {
+      const current = new Date(state.calendarMonth);
+      current.setMonth(current.getMonth() + offset, 1);
+      const firstOfMonth = localDate(current);
+      if (offset < 0 && firstOfMonth < localDate(new Date()).slice(0, 7) + "-01") return;
+      state.calendarMonth = current;
+      renderCalendar();
+      updateValidation();
+    }
+
+    // MOCK API LAYER: replace these methods with real fetch calls without changing UI renderers.
+    const mockApi = {
+      async getFloors(location) { await delay(60); return getFloorsForLocation(location); },
+      async getBays(location, floor) { await delay(60); return getBaysForFloor(location, floor); },
+      async getFloorLayout(location, floor, bay) { await delay(120); return createFloorLayoutConfig(location, floor, bay); },
+      async getAvailability(search, layout) { await delay(650); return createAvailability(search, layout); },
+      async createBooking(search, selectedItems) { await delay(250); return createMockBooking(search, selectedItems); }
+    };
+    function createFloorLayoutConfig(location, floor, bay) {
+      const automaticLayout = floor === "Floor 2" && location === "Pune - Aryabhata" ? "layout-a" : "layout-b";
+      const layoutId = state.layoutId || automaticLayout;
+      const base = FLOOR_LAYOUT_CONFIG[layoutId];
+      const sourceZones = FLOOR_LAYOUT_CONFIG["layout-a"].zones;
+      const sourceRooms = FLOOR_LAYOUT_CONFIG["layout-a"].rooms;
+      const mirror = Boolean(base.mirror);
+      const zones = sourceZones.map((zone) => ({
+        ...zone,
+        x: mirror ? PLAN_WIDTH - zone.x - (zone.cols - 1) * zone.stepX - 50 : zone.x,
+        y: mirror && zone.prefix === "A" ? zone.y - 45 : zone.y
+      }));
+      const spaces = sourceRooms.map((item) => ({
+        ...item,
+        x: mirror ? PLAN_WIDTH - item.x - item.w : item.x
+      }));
+      return {
+        width: PLAN_WIDTH,
+        height: PLAN_HEIGHT,
+        variant: base.variant,
+        zones,
+        location, floor, bay,
+        desks: createDeskPositions(zones),
+        rooms: spaces.filter((entry) => entry.type === "Meeting Room" || entry.type === "Focus Room"),
+        spaces,
+        areas: AREA_DEFS.map((area) => ({ ...area }))
+      };
+    }
+    function createDeskPositions(zones) {
+      return zones.flatMap((zone) => Array.from({ length: zone.count }, (_, index) => {
+        const col = index % zone.cols;
+        const row = Math.floor(index / zone.cols);
+        const offset = zone.arrangement === "angled-pairs" && row % 2 ? 5 : 0;
+        const rotation = zone.arrangement === "angled-pairs" ? (col % 2 ? 7 : -7) : zone.arrangement === "back-to-back" && row % 2 ? 180 : zone.arrangement === "mixed" && index % 4 === 0 ? 8 : 0;
+        return {
+          id: `${zone.prefix}-${String(index + 1).padStart(3, "0")}`,
+          x: zone.x + col * zone.stepX + offset,
+          y: zone.y + row * zone.stepY,
+          rotation, zone: zone.prefix, type: "Desk", arrangement: zone.arrangement
+        };
+      }));
+    }
+    function hashSeed(text) {
+      let hash = 2166136261;
+      for (let i = 0; i < text.length; i++) hash = Math.imul(hash ^ text.charCodeAt(i), 16777619);
+      return hash >>> 0;
+    }
+    function seededRandom(seed) {
+      let value = seed >>> 0;
+      return () => {
+        value += 0x6D2B79F5;
+        let t = value;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+    function createAvailability(search, layout) {
+      const searchKey = `${search.location}|${search.floor}|${search.bay}|${search.date}|${search.from}|${search.to}|${search.bookingType}`;
+      const random = seededRandom(hashSeed(searchKey));
+      const availability = new Map();
+      const bookedSlots = new Map();
+      const slotOptions = [["09:00", "10:30"], ["10:45", "12:00"], ["13:00", "15:00"], ["15:15", "17:00"]];
+      for (const desk of layout.desks) {
+        const value = random();
+        let status = value < .055 ? "unavailable" : value < .31 ? "booked" : "available";
+        const existing = state.bookings.find((booking) => booking.id === desk.id && booking.date === search.date &&
+          booking.location === search.location && booking.floor === search.floor && booking.bay === search.bay &&
+          (search.allDay || booking.from < search.to && search.from < booking.to));
+        if (existing) {
+          status = "booked";
+          bookedSlots.set(desk.id, `${existing.from}–${existing.to}`);
+        } else if (status === "booked") {
+          const [from, to] = slotOptions[Math.floor(random() * slotOptions.length)];
+          bookedSlots.set(desk.id, `${from}–${to}`);
+        }
+        availability.set(desk.id, status);
+      }
+      for (const room of layout.rooms) {
+        const value = random();
+        let status = value < .04 ? "unavailable" : value < .24 ? "booked" : "available";
+        const existing = state.bookings.find((booking) => booking.id === room.id && booking.date === search.date &&
+          booking.location === search.location && booking.floor === search.floor && booking.bay === search.bay &&
+          (search.allDay || booking.from < search.to && search.from < booking.to));
+        if (existing) {
+          status = "booked";
+          bookedSlots.set(room.id, `${existing.from}–${existing.to}`);
+        } else if (status === "booked") {
+          const [from, to] = slotOptions[Math.floor(random() * slotOptions.length)];
+          bookedSlots.set(room.id, `${from}–${to}`);
+        }
+        availability.set(room.id, status);
+      }
+      return { availability, bookedSlots };
+    }
+    function createMockBooking(search, selectedItems) {
+      const start = search.allDay && search.date === localDate(new Date()) ? localClockTime() : search.from;
+      const end = search.allDay ? "23:59" : search.to;
+      for (const item of selectedItems) {
+        const conflict = state.bookings.some((booking) => booking.id === item.id && booking.date === search.date &&
+          booking.location === search.location && booking.floor === search.floor && booking.bay === search.bay &&
+          start < booking.to && booking.from < end);
+        if (conflict) throw new Error(`${item.id} is already booked for an overlapping time slot.`);
+      }
+      const result = selectedItems.map((item) => ({ id: item.id, date: search.date, from: start, to: end, floor: search.floor, bay: search.bay, location: search.location }));
+      state.bookings.push(...result);
+      return result;
+    }
+    function localClockTime() {
+      const now = new Date();
+      return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    }
+
+    function getSearch() {
+      return {
+        location: state.location, floor: state.floor, bay: state.bay, bookingType: state.bookingType,
+        date: state.date, from: state.from, to: state.to, allDay: state.allDay,
+        lunch: state.lunch, snacks: state.snacks
+      };
+    }
+    function setScreen(screen) {
+      const isMap = screen === "map";
+      formScreen.classList.toggle("active", !isMap);
+      mapScreen.classList.toggle("active", isMap);
+      $("#stepChip").textContent = isMap ? "Availability map" : "Select workspace";
+      if (!isMap) {
+        $("#infoCard").hidden = true;
+        hideTooltip();
+      }
+    }
+    async function checkAvailability(event) {
+      event.preventDefault();
+      state.attempted = true;
+      updateValidation();
+      if (!formIsValid()) return;
+      if (!state.layoutId) state.layoutId = state.location === "Pune - Aryabhata" && state.floor === "Floor 2" ? "layout-a" : "layout-b";
+      $("#layoutSelect").value = state.layoutId;
+      state.selected.clear();
+      setScreen("map");
+      $("#mapLoading").hidden = false;
+      plan.innerHTML = "";
+      try {
+        state.layout = await mockApi.getFloorLayout(state.location, state.floor, state.bay);
+        const availability = await mockApi.getAvailability(getSearch(), state.layout);
+        state.availability = availability.availability;
+        state.bookedSlots = availability.bookedSlots;
+        renderFloorPlan();
+        renderSearchSummary();
+        fitFloorPlan();
+        renderAvailabilityCount();
+        renderSelectionSummary();
+      } catch (error) {
+        setScreen("form");
+        showToast(`Could not load mock availability: ${error.message}`);
+      } finally {
+        $("#mapLoading").hidden = true;
+      }
+    }
+    function renderSearchSummary() {
+      const time = state.allDay ? `All Day${state.date === localDate(new Date()) ? ` (from ${localClockTime()})` : ""}` : `${state.from}–${state.to}`;
+      $("#searchSummary").textContent = `${state.location} · ${state.floor} · ${state.bay} · ${state.bookingType} · ${formatDate(state.date)} · ${time}`;
+    }
+    function formatDate(value) {
+      return new Date(`${value}T00:00:00`).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+    }
+    function renderFloorPlan() {
+      const layout = state.layout;
+      const zoomClasses = [
+        state.zoom < .6 ? "desk-ids-hidden" : "",
+        state.zoom < .35 ? "small-room-labels-hidden" : ""
+      ].filter(Boolean).join(" ");
+      const svgParts = [`
+        <defs>
+          <pattern id="hatch" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <rect width="14" height="14" fill="#263138"></rect><line x1="0" y1="0" x2="0" y2="14" stroke="#78858c" stroke-width="3"></line>
+          </pattern>
+          <pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse">
+            <path d="M100 0H0V100" fill="none" stroke="#26343b" stroke-width="2"></path>
+          </pattern>
+        </defs>
+        <rect class="plan-bg" width="${layout.width}" height="${layout.height}"></rect>
+        <rect class="grid-fill" width="${layout.width}" height="${layout.height}"></rect>
+        <rect class="outer-wall" x="32" y="32" width="4736" height="1536"></rect>
+        <rect x="70" y="70" width="4660" height="1460" fill="#0b1117" stroke="#e8eef5" stroke-width="10"></rect>
+        ${renderArchitecture(layout)}
+        <text class="map-large-label" x="95" y="1530">${escapeHtml(`${layout.location} · ${layout.floor} · ${layout.bay}`)}</text>
+        <text class="map-note" x="95" y="1552">${escapeHtml(layout.variant)} · 200 WORKSTATIONS · DIAGRAMMATIC SCALE</text>
+        <g transform="translate(4640 110)"><text class="zone-title" text-anchor="middle">N</text><path class="door-line" d="M0 20V100 M0 20L-14 42 M0 20L14 42"></path><text class="zone-title" x="0" y="126" text-anchor="middle">↑</text></g>
+        <g transform="translate(4370 1510)"><path class="door-line" d="M0 0h100m0 0h100m0 0h300"></path><path class="door-line" d="M0 -9v18m100 -9v18m100 -9v18m300 -9v18"></path><text class="map-note" x="0" y="-16">0m</text><text class="map-note" x="95" y="-16">10m</text><text class="map-note" x="195" y="-16">20m</text><text class="map-note" x="490" y="-16">50m</text></g>
+      `];
+      plan.setAttribute("viewBox", `0 0 ${layout.width} ${layout.height}`);
+      plan.setAttribute("class", `floor-svg ${zoomClasses}`);
+      plan.innerHTML = svgParts.join("");
+      plan.setAttribute("width", `${Math.round(layout.width * state.zoom)}px`);
+      plan.setAttribute("height", `${Math.round(layout.height * state.zoom)}px`);
+      plan.querySelectorAll("[data-item-id]").forEach(bindMapItem);
+      plan.querySelectorAll("[data-area-id]").forEach(bindArea);
+      applyLayerVisibility();
+      renderMinimap();
+      renderAvailabilityCount();
+    }
+    function renderArchitecture(layout) {
+      const parts = [
+        `<text class="zone-title" x="95" y="260">WEST WING</text>
+         <text class="zone-title" x="1900" y="260">CENTRAL CORE</text>
+         <text class="zone-title" x="3500" y="260">EAST WING</text>
+         <path class="inner-wall" d="M1500 70V730 M3300 70V730 M1500 970V1530 M3300 970V1530"></path>
+         <rect class="corridor-fill area-click" data-area-id="corridor" tabindex="0" role="button" aria-label="Main east-west corridor information" x="72" y="740" width="4656" height="220"></rect>
+         <text class="zone-title" x="2400" y="838" text-anchor="middle">EAST — WEST MAIN SPINE · 220</text>
+         <text class="zone-subtitle" x="2400" y="880" text-anchor="middle">CROSS CORRIDORS CONNECT EACH WORK ZONE TO CORE / AMENITIES</text>
+         <rect class="corridor-fill" x="1470" y="300" width="190" height="1030"></rect>
+         <rect class="corridor-fill" x="3190" y="300" width="190" height="1030"></rect>
+         <text class="map-note" transform="translate(1580 690) rotate(-90)" text-anchor="middle">WEST CROSS CORRIDOR</text>
+         <text class="map-note" transform="translate(3300 690) rotate(-90)" text-anchor="middle">EAST CROSS CORRIDOR</text>
+         <path class="inner-wall" d="M1480 300H3320 M1480 1330H3320"></path>
+         ${renderWindows(layout)}
+         ${renderMainEntrance(layout)}
+         ${renderWingSeparators()}`,
+        ...layout.spaces.filter((item) => item.kind !== "direction").map(renderRoom),
+        renderWorkZones(layout),
+        renderExternalParking(layout),
+        renderEmergencyRoutes(layout)
+      ];
+      return parts.join("");
+    }
+    function renderWingSeparators() {
+      return `<path class="thin-wall" d="M1500 70v260 M1500 690v50 M3300 70v260 M3300 690v50"></path>
+        <path class="door-line" d="M1500 330v125 M1500 330a125 125 0 0 1 125 125 M3300 330v125 M3300 330a125 125 0 0 0-125 125"></path>`;
+    }
+    function renderWindows(layout) {
+      return `<g aria-label="Exterior windows">
+        ${[190, 560, 940, 1310, 1670, 2030, 2400, 2770, 3140, 3520, 3890, 4260].map((x) => `<path class="window-line" d="M${x} 70h260"></path>`).join("")}
+        ${[220, 590, 960, 1330].map((x) => `<path class="window-line" d="M${x} 1530h260"></path>`).join("")}
+        <path class="window-line" d="M70 400v250 M4730 390v250 M70 1060v250 M4730 1050v250"></path>
+      </g>`;
+    }
+    function renderMainEntrance(layout) {
+      return `<g class="area-click" data-area-id="reception" tabindex="0" role="button" aria-label="Main entrance and reception information">
+        <path class="door-line" d="M2300 1530v-95 M2300 1435a95 95 0 0 1 95 95 M2395 1530v-95 M2395 1435a95 95 0 0 0 95 95"></path>
+        <text class="zone-title" x="2397" y="1490" text-anchor="middle">MAIN ENTRANCE</text>
+        <path class="door-line" d="M2470 1420h180l-18-16m18 16-18 16"></path>
+        <text class="map-note" x="2665" y="1426">VISITOR CIRCULATION → LIFT LOBBY</text>
+      </g>`;
+    }
+    function renderWorkZones(layout) {
+      return layout.zones.map((zone) => {
+        const rows = Math.ceil(zone.count / zone.cols);
+        const width = (zone.cols - 1) * zone.stepX + 49;
+        const height = (rows - 1) * zone.stepY + 62;
+        const category = zone.prefix === "H" || zone.prefix === "W" ? "flex" : "work";
+        const zoneMarkup = `<g class="area-click layer-desks" data-area-id="open" tabindex="0" role="button" aria-label="${escapeHtml(zone.name)} information">
+          <rect class="zone-outline" x="${zone.x - 28}" y="${zone.y - 48}" width="${width + 56}" height="${height + 74}" rx="8"></rect>
+          <text class="zone-title" x="${zone.x - 6}" y="${zone.y - 18}">${escapeHtml(zone.name)}</text>
+          <text class="zone-subtitle" x="${zone.x + width - 10}" y="${zone.y - 18}" text-anchor="end">${zone.count} SEATS</text>
+        </g>`;
+          return `${zoneMarkup}${renderZoneArrangement(zone)}<g class="layer-desks" data-layer-category="desks">${layout.desks.filter((desk) => desk.zone === zone.prefix).map(renderDesk).join("")}</g>`;
+      }).join("");
+    }
+    function renderZoneArrangement(zone) {
+        const rows = Math.ceil(zone.count / zone.cols);
+        if (zone.arrangement === "pods") {
+          return `<g aria-hidden="true">${Array.from({ length: Math.ceil(rows / 2) }, (_, rowGroup) => Array.from({ length: Math.ceil(zone.cols / 2) }, (_, pod) => {
+            const x = zone.x + pod * 2 * zone.stepX - 7;
+            const y = zone.y + rowGroup * 2 * zone.stepY - 7;
+            const podCols = Math.min(2, zone.cols - pod * 2);
+            const podRows = Math.min(2, rows - rowGroup * 2);
+            const podWidth = 43 + (podCols - 1) * zone.stepX + 12;
+            const podHeight = 31 + (podRows - 1) * zone.stepY + 12;
+            return `<rect class="pod-outline" x="${x}" y="${y}" width="${podWidth}" height="${podHeight}" rx="5"></rect>`;
+          }).join("")).join("")}</g>`;
+        }
+        if (zone.arrangement === "benches" || zone.arrangement === "back-to-back") {
+          return `<g aria-hidden="true">${Array.from({ length: rows }, (_, row) => `<path class="bench-line" d="M${zone.x - 7} ${zone.y + row * zone.stepY - 8}h${(zone.cols - 1) * zone.stepX + 56}v50"></path>`).join("")}</g>`;
+        }
+        if (zone.arrangement === "window") {
+          return `<path class="window-line" d="M${zone.x - 8} ${zone.y - 9}h${(zone.cols - 1) * zone.stepX + 65}"></path>`;
+        }
+        return "";
+    }
+    function renderOpenWorkspace(layout) {
+      return renderWorkZones(layout);
+    }
+    function renderDesk(desk) {
+      const status = state.availability.get(desk.id) || "available";
+      const selected = state.selected.has(desk.id);
+      const css = selected ? "desk-selected" : `desk-${status}`;
+      const canSelect = state.bookingType === "Desk" && (status === "available" || selected);
+      const tabindex = canSelect ? "0" : "-1";
+      return `<g class="desk-item ${css}" data-category="desks" data-item-id="${escapeHtml(desk.id)}" data-item-type="Desk" data-item-status="${status}" data-selectable="${canSelect}" tabindex="${tabindex}" role="button" aria-label="${escapeHtml(`${desk.id}, Desk, ${selected ? "selected" : status}`)}" transform="translate(${desk.x} ${desk.y}) rotate(${desk.rotation} 23 18)">
+        <title>${escapeHtml(desk.id)} · Desk · ${status}</title>
+        ${selected ? `<circle class="selection-ring" cx="21" cy="18" r="34"></circle>` : ""}
+        <rect class="desk-body" x="0" y="0" width="43" height="31" rx="2"></rect>
+        <rect class="monitor" x="15" y="3" width="13" height="8" rx="1"></rect><path class="thin-wall" d="M21 11v3m-4 0h8"></path>
+        <circle class="chair" cx="21" cy="39" r="6"></circle>
+        <text class="desk-id" x="21" y="27">${escapeHtml(desk.id)}</text>
+      </g>`;
+    }
+    function renderRoom(item) {
+      const isBookable = item.type === "Meeting Room" || item.type === "Focus Room";
+      const status = isBookable ? state.availability.get(item.id) || "available" : "unavailable";
+      const selected = isBookable && state.selected.has(item.id);
+      const statusClass = selected ? "room-selected" : `room-${status}`;
+      const category = item.type === "Meeting Room" ? "meeting" : item.type === "Service" ? "service" : item.type === "Circulation" ? "circulation" : "amenity";
+      const data = isBookable
+        ? `data-item-id="${escapeHtml(item.id)}" data-item-type="${escapeHtml(item.type)}" data-item-status="${status}" data-selectable="${status === "available" && item.type === state.bookingType || selected}" data-capacity="${item.capacity}" data-area-id="${escapeHtml(item.areaId)}" tabindex="${status === "available" && item.type === state.bookingType || selected ? "0" : "-1"}" role="button"`
+        : `data-area-id="${escapeHtml(item.areaId)}" tabindex="0" role="button"`;
+      const fill = item.kind === "cafeteria" ? "room-cafeteria" : category === "meeting" ? "room-meeting" : category === "amenity" ? "room-amenity" : category === "service" ? "room-service" : category === "circulation" ? "room-circulation" : "room-work";
+      const doorX = item.w / 2 - 28;
+      const title = isBookable ? item.name.toUpperCase() : item.name.toUpperCase();
+      return `<g class="room-item area-click ${isBookable ? statusClass : ""} layer-${category}" data-category="${category}" data-room-id="${escapeHtml(item.id)}" data-room-label="${escapeHtml(item.name)}" aria-label="${escapeHtml(`${item.name}${item.capacity ? `, capacity ${item.capacity}` : ""}`)}" ${data} transform="translate(${item.x} ${item.y})">
+        <title>${escapeHtml(`${item.name}${item.capacity ? ` · capacity ${item.capacity}` : ""}${item.detail ? ` · ${item.detail}` : ""}`)}</title>
+        <rect class="room-shape ${fill}" x="0" y="0" width="${item.w}" height="${item.h}"></rect>
+        <path class="inner-wall" d="M0 0H${item.w} M0 0V${item.h} M${item.w} 0V${item.h} M0 ${item.h}H${doorX} M${doorX + 56} ${item.h}H${item.w}"></path>
+        <path class="window-line" d="M${Math.max(16, item.w * .18)} 2h${Math.max(35, item.w * .45)}"></path>
+        <path class="door-line" d="M${doorX} ${item.h}v-48 M${doorX} ${item.h - 48}a48 48 0 0 1 48 48"></path>
+        ${renderRoomFurniture(item)}
+        <text class="room-label" x="${item.w / 2}" y="${Math.min(35, item.h * .25)}">${escapeHtml(title)}</text>
+        ${item.detail ? `<text class="room-sub" x="${item.w / 2}" y="${Math.min(58, item.h * .39)}">${escapeHtml(item.detail.toUpperCase())}</text>` : ""}
+        ${item.capacity ? `<text class="room-sub" x="${item.w / 2}" y="${item.h - 12}">${item.capacity} SEATS</text>` : ""}
+      </g>`;
+    }
+    function renderRoomFurniture(item) {
+      const { kind, w, h } = item;
+      if (kind === "cafeteria") return renderDiningFurniture(w, h);
+      if (kind === "meeting" || kind === "conference" || kind === "training") return renderMeetingFurniture(item);
+      if (kind === "washroom") return renderWashroomFurniture(w, h);
+      if (kind === "racks") return renderRackFurniture(w, h);
+      if (kind === "lift-lobby") return renderLiftCore(w, h);
+      if (kind === "stairs") return renderStairFurniture(w, h);
+      if (kind === "kitchen") return `<g>
+        <rect class="furniture-fill" x="15" y="62" width="${w * .31}" height="30"></rect>
+        <rect class="furniture-fill" x="${w * .35}" y="62" width="${w * .31}" height="30"></rect>
+        <rect class="furniture-fill" x="${w * .69}" y="40" width="${w * .24}" height="54"></rect>
+        <text class="map-note" x="${w * .17}" y="112" text-anchor="middle">PREP</text>
+        <text class="map-note" x="${w * .5}" y="112" text-anchor="middle">DISH WASH</text>
+        <text class="map-note" x="${w * .81}" y="112" text-anchor="middle">REFRIGERATOR</text>
+      </g>`;
+      if (kind === "cabin" || kind === "it" || kind === "medical" || kind === "security") return renderOfficeFurniture(w, h, kind);
+      if (kind === "lounge" || kind === "recreation" || kind === "wellness") return renderLoungeFurniture(w, h, kind);
+      if (kind === "lockers" || kind === "shelves" || kind === "cleaning") return renderStorageFurniture(w, h, kind);
+      if (kind === "electrical" || kind === "mechanical") return `<g>${Array.from({ length: 3 }, (_, i) => `<rect class="furniture-fill" x="${18 + i * (w / 4)}" y="${h * .45}" width="${w / 5}" height="${h * .3}"></rect>`).join("")}<text class="map-note" x="${w / 2}" y="${h * .38}" text-anchor="middle">${kind === "electrical" ? "DB · DISTRIBUTION PANELS" : "AIR HANDLING UNIT"}</text></g>`;
+      if (kind === "printer" || kind === "basins") return `<g>${Array.from({ length: 3 }, (_, i) => `<rect class="furniture-fill" x="${22 + i * 48}" y="${h * .5}" width="38" height="30" rx="3"></rect>`).join("")}<text class="map-note" x="${w / 2}" y="${h * .4}" text-anchor="middle">${kind === "printer" ? "PRINT / SCAN" : "BASINS · MIRRORS"}</text></g>`;
+      if (kind === "shower") return renderWashroomFurniture(w, h, true);
+      if (kind === "reception") return `<path class="furniture-fill" d="M${w * .22} ${h * .65}h${w * .56}v26h-${w * .56}z"></path><circle class="table-seat" cx="${w * .5}" cy="${h * .48}" r="13"></circle>`;
+      if (kind === "exit" || kind === "direction") return `<text class="map-large-label" x="${w / 2}" y="${h * .72}" text-anchor="middle">→</text>`;
+      return `<rect class="furniture-fill" x="${w * .25}" y="${h * .48}" width="${w * .5}" height="${h * .2}"></rect>`;
+    }
+    function renderDiningFurniture(w, h) {
+      const tables = [];
+      for (let row = 0; row < 3; row++) for (let col = 0; col < 8; col++) {
+        const x = 35 + col * ((w - 90) / 8), y = 82 + row * 56;
+        const six = col % 2 === 0;
+        const seats = six
+          ? `<circle class="table-seat" cx="${x + 16}" cy="${y - 8}" r="5"></circle><circle class="table-seat" cx="${x + 47}" cy="${y - 8}" r="5"></circle><circle class="table-seat" cx="${x + 16}" cy="${y + 43}" r="5"></circle><circle class="table-seat" cx="${x + 47}" cy="${y + 43}" r="5"></circle><circle class="table-seat" cx="${x - 8}" cy="${y + 17}" r="5"></circle><circle class="table-seat" cx="${x + 71}" cy="${y + 17}" r="5"></circle>`
+          : `<circle class="table-seat" cx="${x - 8}" cy="${y + 17}" r="5"></circle><circle class="table-seat" cx="${x + 71}" cy="${y + 17}" r="5"></circle><circle class="table-seat" cx="${x + 18}" cy="${y - 8}" r="5"></circle><circle class="table-seat" cx="${x + 45}" cy="${y + 43}" r="5"></circle>`;
+        tables.push(`<g><rect class="table-shape" x="${x}" y="${y}" width="62" height="34" rx="6"></rect>${seats}</g>`);
+      }
+      return `<g>${tables.join("")}<rect class="furniture-fill" x="${w - 160}" y="42" width="120" height="30"></rect><text class="map-note" x="${w - 100}" y="36" text-anchor="middle">SERVING</text></g>`;
+    }
+    function renderMeetingFurniture(item) {
+      const { w, h, kind } = item;
+      if (kind === "training") return `<g><rect class="furniture-fill" x="${w - 110}" y="52" width="80" height="26"></rect><text class="map-note" x="${w - 70}" y="47" text-anchor="middle">SCREEN</text>${Array.from({ length: 3 }, (_, row) => Array.from({ length: 5 }, (_, col) => `<rect class="table-shape" x="${25 + col * 72}" y="${85 + row * 42}" width="48" height="22" rx="2"></rect><circle class="table-seat" cx="${48 + col * 72}" cy="${113 + row * 42}" r="5"></circle>`).join("")).join("")}</g>`;
+      const tableW = kind === "conference" ? w * .57 : w * .46;
+      const tableX = (w - tableW) / 2, tableY = h * .53;
+      const chairs = Array.from({ length: kind === "conference" ? 8 : 6 }, (_, i) => {
+        const cx = tableX + 20 + i * ((tableW - 40) / (kind === "conference" ? 7 : 5));
+        return `<circle class="table-seat" cx="${cx}" cy="${tableY - 16}" r="7"></circle><circle class="table-seat" cx="${cx}" cy="${tableY + 47}" r="7"></circle>`;
+      }).join("");
+      return `<g><rect class="furniture-fill" x="${w - 82}" y="47" width="50" height="28"></rect><text class="map-note" x="${w - 58}" y="43" text-anchor="middle">DISPLAY</text><rect class="table-shape" x="${tableX}" y="${tableY}" width="${tableW}" height="32" rx="8"></rect>${chairs}</g>`;
+    }
+    function renderWashroomFurniture(w, h, shower = false) {
+      const cubicles = Array.from({ length: shower ? 3 : 4 }, (_, index) => {
+        const x = 18 + index * ((w - 42) / (shower ? 3 : 4));
+        return `<rect class="thin-wall" x="${x}" y="73" width="${shower ? 45 : 36}" height="${h - 102}"></rect><circle class="table-seat" cx="${x + 18}" cy="102" r="7"></circle><path class="furniture-line" d="M${x + 8} 127h20"></path>`;
+      }).join("");
+      const basins = Array.from({ length: Math.max(2, Math.floor(w / 70)) }, (_, i) => `<ellipse class="furniture-fill" cx="${25 + i * ((w - 50) / Math.max(1, Math.floor(w / 70) - 1))}" cy="${h - 25}" rx="13" ry="7"></ellipse>`).join("");
+      return `<g>${cubicles}${basins}</g>`;
+    }
+    function renderRackFurniture(w, h) {
+      return `<g>${Array.from({ length: 4 }, (_, i) => `<rect class="furniture-fill" x="${18 + i * ((w - 45) / 4)}" y="${h * .45}" width="${Math.min(40, w / 6)}" height="${h * .35}"></rect><path class="thin-wall" d="M${23 + i * ((w - 45) / 4)} ${h * .55}h${Math.min(28, w / 7)}m-${Math.min(28, w / 7)} 14h${Math.min(28, w / 7)}"></path>`).join("")}</g>`;
+    }
+    function renderLiftCore(w, h) {
+      const lifts = Array.from({ length: 5 }, (_, i) => {
+        const x = 18 + (i % 3) * ((w - 95) / 3), y = 70 + Math.floor(i / 3) * 105;
+        const label = i === 4 ? "SERVICE LIFT" : `LIFT ${i + 1}`;
+        return `<g><rect class="furniture-fill" x="${x}" y="${y}" width="105" height="82"></rect><path class="lift-cross" d="M${x + 16} ${y + 14}l73 53m0-53-73 53"></path><text class="room-sub" x="${x + 52}" y="${y + 100}">${label}</text></g>`;
+      }).join("");
+      return `${lifts}<text class="map-note" x="${w / 2}" y="${h - 15}" text-anchor="middle">LIFT LOBBY / CLEAR CIRCULATION</text>`;
+    }
+    function renderStairFurniture(w, h) {
+      return `<g>${Array.from({ length: 9 }, (_, i) => `<path class="stairs-line" d="M15 ${60 + i * 12}h${w - 30}"></path>`).join("")}<path class="door-line" d="M${w / 2} ${h - 25}v-45m0 0-12 16m12-16 12 16"></path><text class="room-sub" x="${w / 2}" y="${h - 7}">UP / DN · FIRE STAIR</text></g>`;
+    }
+    function renderOfficeFurniture(w, h, kind) {
+      return `<g><rect class="furniture-fill" x="${w * .34}" y="${h * .52}" width="${w * .34}" height="30"></rect><circle class="chair" cx="${w * .5}" cy="${h * .79}" r="11"></circle><rect class="furniture-fill" x="15" y="${h * .46}" width="40" height="22"></rect>${kind === "it" ? `<rect class="furniture-fill" x="${w * .72}" y="${h * .42}" width="40" height="48"></rect>` : `<circle class="table-seat" cx="${w * .2}" cy="${h * .75}" r="9"></circle><circle class="table-seat" cx="${w * .8}" cy="${h * .75}" r="9"></circle>`}</g>`;
+    }
+    function renderLoungeFurniture(w, h, kind) {
+      if (kind === "recreation") return `<g>
+        <rect class="furniture-fill" x="${w * .15}" y="${h * .42}" width="${w * .48}" height="35"></rect>
+        <path class="thin-wall" d="M${w * .18} ${h * .39}h${w * .42}"></path>
+        <rect class="furniture-fill" x="${w * .68}" y="${h * .3}" width="${w * .2}" height="${h * .43}"></rect>
+        <text class="map-note" x="${w * .78}" y="${h * .56}" text-anchor="middle">PING-PONG</text>
+        <rect class="furniture-fill" x="${w * .16}" y="${h * .78}" width="${w * .43}" height="20"></rect>
+        <text class="map-note" x="${w * .37}" y="${h * .94}" text-anchor="middle">FOOSBALL</text>
+        <circle class="table-seat" cx="${w * .12}" cy="${h * .75}" r="11"></circle>
+      </g>`;
+      return `<g><path class="furniture-fill" d="M${w * .12} ${h * .58}q0-20 20-20h${w * .24}q20 0 20 20v22H${w * .12}z"></path><path class="furniture-fill" d="M${w * .56} ${h * .58}q0-20 20-20h${w * .24}q20 0 20 20v22H${w * .56}z"></path><ellipse class="table-shape" cx="${w * .5}" cy="${h * .72}" rx="38" ry="19"></ellipse><circle class="table-seat" cx="${w * .5}" cy="${h * .72}" r="7"></circle></g>`;
+    }
+    function renderStorageFurniture(w, h, kind) {
+      return `<g>${Array.from({ length: 4 }, (_, i) => `<rect class="furniture-fill" x="${14 + i * ((w - 45) / 4)}" y="${h * .47}" width="${Math.min(42, w / 6)}" height="${h * .34}"></rect>`).join("")}${kind === "lockers" ? `<rect class="furniture-fill" x="${w * .25}" y="${h * .78}" width="${w * .5}" height="10"></rect>` : `<text class="map-note" x="${w / 2}" y="${h * .38}" text-anchor="middle">${kind === "cleaning" ? "MOP SINK · CART" : "SHELVES · SUPPLIES"}</text>`}</g>`;
+    }
+    function renderExternalParking(layout) {
+      const item = layout.spaces.find((entry) => entry.kind === "direction");
+      if (!item) return "";
+      return `<g class="area-click layer-circulation" data-area-id="${escapeHtml(item.areaId)}" tabindex="0" role="button" aria-label="Parking to basement information">
+        <path class="door-line" d="M2200 1572h130l-18-16m18 16-18 16"></path>
+        <text class="area-label" x="2345" y="1578">PARKING → BASEMENT</text>
+      </g>`;
+    }
+    function renderEmergencyRoutes(layout) {
+      return `<g class="layer-circulation"><path class="door-line" d="M95 750H45v-85m4660 85h45v-85 M95 950H45v85m4660-85h45v85"></path>
+        <text class="map-note" x="80" y="720">FIRE EXIT</text><text class="map-note" x="4520" y="720">FIRE EXIT</text>
+        <path class="door-line" d="M1480 850h220m1500 0h220"></path></g>`;
+    }
+    function renderMinimap() {
+      if (!state.layout) return;
+      const layout = state.layout;
+      const viewportRect = viewport.getBoundingClientRect();
+      const scaleX = layout.width / Math.max(plan.clientWidth, 1);
+      const scaleY = layout.height / Math.max(plan.clientHeight, 1);
+      const visibleX = viewport.scrollLeft * scaleX;
+      const visibleY = viewport.scrollTop * scaleY;
+      const visibleW = Math.min(layout.width, viewport.clientWidth * scaleX);
+      const visibleH = Math.min(layout.height, viewport.clientHeight * scaleY);
+      const mini = $("#minimapSvg");
+      mini.innerHTML = `<rect class="minimap-outline" x="32" y="32" width="4736" height="1536"></rect>
+        ${layout.zones.map((zone) => `<rect class="minimap-zone" x="${zone.x - 20}" y="${zone.y - 40}" width="${(zone.cols - 1) * zone.stepX + 70}" height="${Math.ceil(zone.count / zone.cols) * zone.stepY + 45}"></rect>`).join("")}
+        ${layout.spaces.filter((item) => item.kind !== "direction").map((item) => `<rect class="minimap-room" x="${item.x}" y="${item.y}" width="${item.w}" height="${item.h}"></rect>`).join("")}
+        <rect class="minimap-viewport" data-minimap-window="true" x="${visibleX}" y="${visibleY}" width="${visibleW}" height="${visibleH}"></rect>`;
+      mini.dataset.scaleX = String(scaleX);
+      mini.dataset.scaleY = String(scaleY);
+      mini.dataset.rectLeft = String(viewportRect.left);
+      mini.dataset.rectTop = String(viewportRect.top);
+    }
+    function moveViewportFromMinimap(event) {
+      if (!state.layout) return;
+      const rect = $("#minimapSvg").getBoundingClientRect();
+      const x = ((event.clientX - rect.left) / rect.width) * state.layout.width;
+      const y = ((event.clientY - rect.top) / rect.height) * state.layout.height;
+      const scaleX = state.layout.width / Math.max(plan.clientWidth, 1);
+      const scaleY = state.layout.height / Math.max(plan.clientHeight, 1);
+      viewport.scrollLeft = Math.max(0, x / scaleX - viewport.clientWidth / 2);
+      viewport.scrollTop = Math.max(0, y / scaleY - viewport.clientHeight / 2);
+      renderMinimap();
+    }
+    function svgAreaType(type) {
+      return ({ work: "work", meeting: "meeting", amenity: "amenity", service: "service", circulation: "circulation" })[type] || "service";
+    }
+    function bindMapItem(node) {
+      const id = node.dataset.itemId;
+      node.addEventListener("mouseenter", (event) => showItemTooltip(node, event));
+      node.addEventListener("mousemove", moveTooltip);
+      node.addEventListener("mouseleave", hideTooltip);
+      node.addEventListener("focus", () => showItemTooltip(node));
+      node.addEventListener("blur", hideTooltip);
+      node.addEventListener("click", (event) => {
+        event.stopPropagation();
+        showItemTooltip(node, event);
+        toggleSelection(id, node.dataset.itemType, node.dataset.itemStatus, node.dataset.selectable === "true");
+      });
+      node.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          toggleSelection(id, node.dataset.itemType, node.dataset.itemStatus, node.dataset.selectable === "true");
+        }
+      });
+    }
+    function tooltipText(node) {
+      const id = node.dataset.itemId;
+      const type = node.dataset.itemType;
+      const status = state.selected.has(id) ? "Selected" : node.dataset.itemStatus;
+      const booking = state.bookings.find((item) => item.id === id && item.date === state.date && item.floor === state.floor);
+      const seededBooking = status === "booked" ? `Booked slot: ${booking ? `${booking.from}–${booking.to}` : state.bookedSlots.get(id) || `${state.from}–${state.to}`}` : "";
+      const capacity = node.dataset.capacity ? `<br>Capacity: ${escapeHtml(node.dataset.capacity)}` : "";
+      return `<strong>${escapeHtml(id)}</strong><br>${escapeHtml(type)} · ${escapeHtml(status)}${capacity}${seededBooking ? `<br>${escapeHtml(seededBooking)}` : ""}`;
+    }
+    function showItemTooltip(node, event) {
+      const tooltip = $("#tooltip");
+      tooltip.innerHTML = tooltipText(node);
+      tooltip.style.display = "block";
+      tooltip.setAttribute("aria-hidden", "false");
+      if (event && Number.isFinite(event.clientX)) positionTooltip(event.clientX, event.clientY);
+      else {
+        const rect = node.getBoundingClientRect();
+        positionTooltip(rect.left + rect.width / 2, rect.top);
+      }
+    }
+    function positionTooltip(x, y) {
+      const tooltip = $("#tooltip");
+      tooltip.style.left = `${Math.min(window.innerWidth - 280, Math.max(8, x + 12))}px`;
+      tooltip.style.top = `${Math.min(window.innerHeight - 100, Math.max(8, y + 12))}px`;
+    }
+    function moveTooltip(event) { positionTooltip(event.clientX, event.clientY); }
+    function hideTooltip() { $("#tooltip").style.display = "none"; $("#tooltip").setAttribute("aria-hidden", "true"); }
+    function toggleSelection(id, type, status, selectable) {
+      const currentStatus = state.selected.has(id) ? "selected" : status;
+      if (!selectable || currentStatus === "booked" || currentStatus === "unavailable") {
+        const node = plan.querySelector(`[data-item-id="${CSS.escape(id)}"]`);
+        if (node) showItemTooltip(node);
+        return;
+      }
+      if (state.selected.has(id)) state.selected.delete(id);
+      else {
+        const sameType = [...state.selected].map((selectedId) => findItem(selectedId)).filter(Boolean);
+        if (type === "Desk" && sameType.filter((item) => item.type === "Desk").length >= MAX_DESK_SELECTION) {
+          showToast(`You can select up to ${MAX_DESK_SELECTION} desk${MAX_DESK_SELECTION === 1 ? "" : "s"}.`);
+          return;
+        }
+        if (type !== state.bookingType) {
+          showToast(`Choose ${type} as the Booking Type to select this room.`);
+          return;
+        }
+        state.selected.add(id);
+      }
+      renderFloorPlan();
+      renderAvailabilityCount();
+      renderSelectionSummary();
+      $("#bookNow").disabled = state.selected.size === 0;
+    }
+    function findItem(id) {
+      return state.layout.desks.find((item) => item.id === id) || state.layout.rooms.find((item) => item.id === id);
+    }
+    function renderAvailabilityCount() {
+      if (!state.layout) return;
+      const available = state.layout.desks.filter((desk) => state.availability.get(desk.id) === "available").length;
+      $("#availabilityCount").textContent = `${available} of ${state.layout.desks.length} desks available`;
+    }
+    function renderSelectionSummary() {
+      const selected = [...state.selected];
+      if (!selected.length) {
+        $("#selectionSummary").innerHTML = "<strong>No workspaces selected.</strong> Choose an available desk or room.";
+        $("#bookNow").disabled = true;
+        return;
+      }
+      const time = state.allDay ? "All Day" : `${state.from}–${state.to}`;
+      const addons = [state.lunch && "Lunch", state.snacks && "Snacks"].filter(Boolean).join(", ") || "None";
+      $("#selectionSummary").innerHTML = `<strong>Selected:</strong> ${selected.map(escapeHtml).join(", ")} <span>· ${escapeHtml(formatDate(state.date))} · ${escapeHtml(time)} · Add-ons: ${escapeHtml(addons)}</span>`;
+      $("#bookNow").disabled = false;
+    }
+    function bindArea(node) {
+      const id = node.dataset.areaId;
+      const area = state.layout.areas.find((item) => item.id === id) || state.layout.areas.find((item) => item.name === id);
+      node.addEventListener("click", (event) => {
+        event.stopPropagation();
+        if (!area) return;
+        $("#infoTitle").textContent = area.name;
+        $("#infoText").textContent = `${area.type[0].toUpperCase()}${area.type.slice(1)} area${area.capacity ? ` · Capacity / seating: ${area.capacity}` : ""}. ${area.desc}`;
+        $("#infoCard").hidden = false;
+      });
+      node.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") { event.preventDefault(); node.dispatchEvent(new MouseEvent("click", { bubbles: true })); }
+      });
+    }
+    function renderConfirmDetails() {
+      const time = state.allDay ? `All Day${state.date === localDate(new Date()) ? ` from ${localClockTime()}` : ""}` : `${state.from}–${state.to}`;
+      const selected = [...state.selected];
+      const lines = [
+        ["Location", state.location], ["Floor / Bay", `${state.floor} / ${state.bay}`],
+        ["Booking type", state.bookingType], ["Workspace(s)", selected.join(", ")],
+        ["Date", formatDate(state.date)], ["Time", time],
+        ["Add-ons", [state.lunch && "Lunch", state.snacks && "Snacks"].filter(Boolean).join(", ") || "None"]
+      ];
+      $("#confirmDetails").innerHTML = lines.map(([key, value]) => `<dt>${escapeHtml(key)}</dt><dd>${escapeHtml(value)}</dd>`).join("");
+    }
+    async function bookSelected() {
+      const button = $("#confirmBooking");
+      button.disabled = true;
+      try {
+        await mockApi.createBooking(getSearch(), [...state.selected].map((id) => findItem(id)).filter(Boolean));
+        for (const id of state.selected) state.availability.set(id, "booked");
+        const ids = [...state.selected].join(", ");
+        $("#confirmDialog").close();
+        state.selected.clear();
+        renderFloorPlan();
+        renderAvailabilityCount();
+        renderSelectionSummary();
+        showToast(`Booking confirmed for ${ids}.`);
+      } catch (error) {
+        showToast(error.message);
+      } finally {
+        button.disabled = false;
+      }
+    }
+    function showToast(message) {
+      const toast = $("#toast");
+      toast.textContent = message;
+      toast.classList.add("visible");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove("visible"), 3400);
+    }
+    function changeZoom(amount, pointer) {
+      if (!state.layout) return;
+      const rect = viewport.getBoundingClientRect();
+      const pointX = pointer ? pointer.clientX - rect.left : viewport.clientWidth / 2;
+      const pointY = pointer ? pointer.clientY - rect.top : viewport.clientHeight / 2;
+      const oldWidth = plan.clientWidth || state.layout.width * state.zoom;
+      const oldHeight = plan.clientHeight || state.layout.height * state.zoom;
+      const anchorX = (viewport.scrollLeft + pointX) / oldWidth;
+      const anchorY = (viewport.scrollTop + pointY) / oldHeight;
+      const fitScale = Math.min(viewport.clientWidth / state.layout.width, viewport.clientHeight / state.layout.height);
+      state.zoom = Math.max(Math.min(.15, fitScale), Math.min(4, Math.round((state.zoom + amount) * 100) / 100));
+      plan.setAttribute("width", `${Math.round(state.layout.width * state.zoom)}px`);
+      plan.setAttribute("height", `${Math.round(state.layout.height * state.zoom)}px`);
+      updateLevelOfDetail();
+      viewport.scrollLeft = anchorX * plan.clientWidth - pointX;
+      viewport.scrollTop = anchorY * plan.clientHeight - pointY;
+      renderMinimap();
+    }
+    function fitFloorPlan() {
+      if (!state.layout || !viewport.clientWidth || !viewport.clientHeight) return;
+      state.zoom = Math.min(4, Math.min(viewport.clientWidth / state.layout.width, viewport.clientHeight / state.layout.height));
+      plan.setAttribute("width", `${Math.round(state.layout.width * state.zoom)}px`);
+      plan.setAttribute("height", `${Math.round(state.layout.height * state.zoom)}px`);
+      updateLevelOfDetail();
+      viewport.scrollTo({ left: 0, top: 0, behavior: "smooth" });
+      renderMinimap();
+    }
+    function updateLevelOfDetail() {
+      plan.classList.toggle("desk-ids-hidden", state.zoom < .6);
+      plan.classList.toggle("small-room-labels-hidden", state.zoom < .35);
+    }
+    function resetView() { fitFloorPlan(); }
+    async function switchLayout() {
+      state.layoutId = $("#layoutSelect").value;
+      try {
+        state.layout = await mockApi.getFloorLayout(state.location, state.floor, state.bay);
+        const availability = await mockApi.getAvailability(getSearch(), state.layout);
+        state.availability = availability.availability;
+        state.bookedSlots = availability.bookedSlots;
+        renderFloorPlan();
+        renderSelectionSummary();
+        fitFloorPlan();
+      } catch (error) {
+        showToast(`Could not switch floor-plan layout: ${error.message}`);
+      }
+    }
+    function applyLayerVisibility() {
+      if (!state.layout) return;
+      const selectorByLayer = {
+        desks: ".layer-desks",
+        meeting: '[data-category="meeting"]',
+        amenity: '[data-category="amenity"]',
+        service: '[data-category="service"]'
+      };
+      for (const [layer, selector] of Object.entries(selectorByLayer)) {
+        plan.querySelectorAll(selector).forEach((node) => node.classList.toggle("svg-hide", !state.layers[layer]));
+      }
+    }
+    function setupMinimap() {
+      const mini = $("#minimap");
+      let dragging = false;
+      mini.addEventListener("pointerdown", (event) => {
+        dragging = true;
+        mini.setPointerCapture(event.pointerId);
+        moveViewportFromMinimap(event);
+      });
+      mini.addEventListener("pointermove", (event) => {
+        if (dragging) moveViewportFromMinimap(event);
+      });
+      const stopDragging = () => { dragging = false; };
+      mini.addEventListener("pointerup", stopDragging);
+      mini.addEventListener("pointercancel", stopDragging);
+    }
+    function pointerDistance(a, b) {
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    }
+    function setupPanZoom() {
+      viewport.addEventListener("pointerdown", (event) => {
+        pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        if (pointers.size === 2) {
+          pinchDistance = pointerDistance(...pointers.values());
+          panPointer = null;
+        } else if (pointers.size === 1 && !event.target.closest(".desk-item,.room-item,.area-click")) {
+          panPointer = { id: event.pointerId, x: event.clientX, y: event.clientY, left: viewport.scrollLeft, top: viewport.scrollTop };
+          viewport.setPointerCapture(event.pointerId);
+        }
+      });
+      viewport.addEventListener("pointermove", (event) => {
+        if (!pointers.has(event.pointerId)) return;
+        pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        if (pointers.size >= 2) {
+          const distance = pointerDistance(...pointers.values());
+          if (pinchDistance && Math.abs(distance - pinchDistance) > 3) {
+            const activePointers = [...pointers.values()];
+            const center = {
+              clientX: (activePointers[0].x + activePointers[1].x) / 2,
+              clientY: (activePointers[0].y + activePointers[1].y) / 2
+            };
+            changeZoom((distance - pinchDistance) / 500, center);
+            pinchDistance = distance;
+          }
+        } else if (panPointer && panPointer.id === event.pointerId) {
+          viewport.scrollLeft = panPointer.left - (event.clientX - panPointer.x);
+          viewport.scrollTop = panPointer.top - (event.clientY - panPointer.y);
+        }
+      });
+      const end = (event) => {
+        pointers.delete(event.pointerId);
+        if (pointers.size < 2) pinchDistance = null;
+        if (panPointer && panPointer.id === event.pointerId) panPointer = null;
+      };
+      viewport.addEventListener("pointerup", end);
+      viewport.addEventListener("pointercancel", end);
+      viewport.addEventListener("wheel", (event) => {
+        event.preventDefault();
+        changeZoom(event.deltaY < 0 ? .08 : -.08, event);
+      }, { passive: false });
+    }
+    function navigateBack() {
+      if (window.history.length > 1) window.history.back();
+      else showToast("Your form is saved on this page. Use Edit search to return without losing it.");
+    }
+    function restoreFormFromState() {
+      if (state.location) locationInput.value = state.location;
+      fillSelect(floorSelect, state.location ? getFloorsForLocation(state.location) : [], state.location ? "Select a floor" : "Choose a location first");
+      floorSelect.disabled = !state.location;
+      if (state.floor) floorSelect.value = state.floor;
+      fillSelect(baySelect, state.floor ? getBaysForFloor(state.location, state.floor) : [], state.floor ? "Select a bay" : "Choose a floor first");
+      baySelect.disabled = !state.floor;
+      if (state.bay) baySelect.value = state.bay;
+      $("#typeSelect").value = state.bookingType;
+      $("#allDay").checked = state.allDay;
+      $("#lunch").checked = state.lunch;
+      $("#snacks").checked = state.snacks;
+      fillTimeSelect(fromSelect, state.from);
+      fillTimeSelect(toSelect, state.to);
+      renderCalendar();
+      updateValidation();
+      setScreen("form");
+    }
+    function initialize() {
+      fillTimeSelect(fromSelect, state.from);
+      fillTimeSelect(toSelect, state.to);
+      renderCalendar();
+      updateValidation();
+      locationInput.addEventListener("focus", () => renderLocationOptions(locationInput.value));
+      locationInput.addEventListener("input", handleLocationInput);
+      locationInput.addEventListener("keydown", (event) => {
+        const options = [...locationOptions.querySelectorAll("[data-location]")];
+        if (event.key === "ArrowDown" && !locationOptions.hidden) {
+          event.preventDefault();
+          locationActiveIndex = Math.min(locationActiveIndex + 1, options.length - 1);
+          options.forEach((option, index) => option.setAttribute("aria-selected", String(index === locationActiveIndex)));
+        } else if (event.key === "ArrowUp" && !locationOptions.hidden) {
+          event.preventDefault();
+          locationActiveIndex = Math.max(locationActiveIndex - 1, 0);
+          options.forEach((option, index) => option.setAttribute("aria-selected", String(index === locationActiveIndex)));
+        } else if (event.key === "Enter" && !locationOptions.hidden && options.length) {
+          event.preventDefault();
+          const index = locationActiveIndex >= 0 ? locationActiveIndex : 0;
+          chooseLocation(options[index].dataset.location);
+        } else if (event.key === "Escape") closeLocationOptions();
+      });
+      document.addEventListener("click", (event) => {
+        if (!$("#locationField").contains(event.target)) closeLocationOptions();
+        if (!event.target.closest(".area-toggle")) {
+          $("#areaLegend").hidden = true;
+          $("#areaLegendToggle").setAttribute("aria-expanded", "false");
+        }
+      });
+      floorSelect.addEventListener("change", async () => {
+        state.floor = floorSelect.value;
+        state.bay = "";
+        state.layoutId = "";
+        const bays = state.floor ? await mockApi.getBays(state.location, state.floor) : [];
+        fillSelect(baySelect, bays, state.floor ? "Select a bay" : "Choose a floor first");
+        baySelect.disabled = !state.floor;
+        updateValidation();
+      });
+      baySelect.addEventListener("change", () => { state.bay = baySelect.value; updateValidation(); });
+      $("#typeSelect").addEventListener("change", () => { state.bookingType = $("#typeSelect").value; updateValidation(); });
+      fromSelect.addEventListener("change", updateValidation);
+      toSelect.addEventListener("change", updateValidation);
+      ["allDay", "lunch", "snacks"].forEach((id) => $(`#${id}`).addEventListener("change", updateValidation));
+      form.addEventListener("submit", checkAvailability);
+      $("#formBack").addEventListener("click", navigateBack);
+      $("#editSearch").addEventListener("click", restoreFormFromState);
+      $("#mapBack").addEventListener("click", restoreFormFromState);
+      $("#zoomIn").addEventListener("click", () => changeZoom(.15));
+      $("#zoomOut").addEventListener("click", () => changeZoom(-.15));
+      $("#resetView").addEventListener("click", resetView);
+      $("#fitWidth").addEventListener("click", fitFloorPlan);
+      $("#layoutSelect").addEventListener("change", switchLayout);
+      document.querySelectorAll(".visibility-toggle").forEach((button) => button.addEventListener("click", () => {
+        const layer = button.dataset.layer;
+        state.layers[layer] = !state.layers[layer];
+        button.setAttribute("aria-pressed", String(state.layers[layer]));
+        applyLayerVisibility();
+      }));
+      $("#areaLegendToggle").addEventListener("click", () => {
+        const legend = $("#areaLegend");
+        legend.hidden = !legend.hidden;
+        $("#areaLegendToggle").setAttribute("aria-expanded", String(!legend.hidden));
+      });
+      $("#bookNow").addEventListener("click", () => {
+        if (!state.selected.size) return;
+        renderConfirmDetails();
+        $("#confirmDialog").showModal();
+      });
+      $("#cancelBooking").addEventListener("click", () => $("#confirmDialog").close());
+      $("#confirmBooking").addEventListener("click", bookSelected);
+      $("#confirmDialog").addEventListener("cancel", hideTooltip);
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          hideTooltip();
+          $("#infoCard").hidden = true;
+        }
+      });
+      setupPanZoom();
+      viewport.addEventListener("scroll", renderMinimap, { passive: true });
+      window.addEventListener("resize", () => {
+        if (state.layout && state.zoom <= .3) fitFloorPlan();
+        else renderMinimap();
+      });
+      setupMinimap();
+    }
+    initialize();
+  </script>
+</body>
+</html>

@@ -37,20 +37,15 @@ Open the URL printed by Vite, usually `http://localhost:5174/`.
 
 ## Login
 
-Use the seeded local account:
+Sign in with your account email and password. The password field masks input.
 
-```text
-Username: ipshita
-Password: 1234
-```
-
-The SSO button is displayed as a placeholder, but username/password is the only active login method in this POC.
+Sign in with email and password or use the Microsoft button when Entra ID is configured in the backend.
 
 ## Frontend workflow
 
 1. Sign in.
 2. Start a new booking.
-3. Select a Persistent Systems location, floor, bay, and workspace type.
+3. Select a location, floor, bay, and workspace type.
 4. Select a date and workspace from the floor map.
 5. Book the workspace.
 6. Open My bookings to view booking history.
