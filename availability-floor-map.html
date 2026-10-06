@@ -142,6 +142,8 @@
     .modal-content p { color: #64797a; font-size: 12px; line-height: 1.5; }
     .confirm-list { display: grid; grid-template-columns: 130px 1fr; gap: 7px 12px; margin: 16px 0; padding: 13px; border-radius: 10px; background: #eaf3f0; font-size: 12px; }
     .confirm-list dt { color: #6a7f80; }.confirm-list dd { margin: 0; color: #1c3c3e; font-weight: 750; overflow-wrap: anywhere; }
+    .booking-feedback { min-height: 18px; margin: 10px 0 0; color: #60777a; font-size: 12px; line-height: 1.5; }
+    .booking-feedback.error { color: #ae3942; font-weight: 700; }
     .modal-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 17px; }
     .btn-cancel { border: 1px solid #ccd9d7; color: #385253; background: #fff; }
     .info-card { position: fixed; z-index: 32; right: 16px; bottom: 76px; width: min(320px, calc(100vw - 32px)); padding: 14px; border: 1px solid #506365; border-radius: 11px; color: #dce9e6; background: #142326; box-shadow: 0 12px 30px #0008; }
@@ -392,6 +394,7 @@
       <h2 id="confirmTitle">Confirm booking</h2>
       <p>Review your mock booking details before confirming.</p>
       <dl class="confirm-list" id="confirmDetails"></dl>
+      <p class="booking-feedback" id="bookingFeedback" role="status" aria-live="polite"></p>
       <div class="modal-actions">
         <button class="btn btn-cancel" type="button" id="cancelBooking">Cancel</button>
         <button class="btn btn-primary" type="button" id="confirmBooking">Confirm booking</button>
@@ -439,17 +442,20 @@
       "Pune - Pingala": ["Floor 1", "Floor 2", "Floor 3", "Floor 4", "Floor 5", "Floor 6"],
       "Pune - Ramanujan": ["1st Floor", "2nd Floor", "3rd Floor", "Ground Floor"]
     };
-    const DEFAULT_BAYS = ["Open Area", "Meeting Area", "Focus Room"];
+    const DEFAULT_BAYS = ["Open Area"];
+    const LOCATION_BAY_CONFIG = {
+      "Hyderabad - Equinox": ["Meeting Area", "ODC 1", "ODC 2", "ODC 3", "Open Area"],
+      "Indore - Brilliant Centre": ["Open Area", "4th Floor Meeting Area", "Meeting Area"],
+      "Kochi- Nippon Q1": ["Open Area", "Meetin Room"],
+      "Kolkata - Godrej Genesis": ["Open Area", "Meeting Area"],
+      "Mumbai - Time Square": ["Open Area", "Meeting Room", "Board Room"],
+      "Nagpur - Gargi": ["Meeting Area"],
+      "Pune - Aryabhata": ["Open Area", "Meeting Area", "Focus Room"],
+      "Pune - Bhageerath": ["Block A"]
+    };
     const BAY_CONFIG = {
-      "Hyderabad - Equinox|3rd Floor": ["Meeting Area", "ODC 1", "ODC 2", "ODC 3", "Open Area", "Meeting Room", "Focus Room"],
-      "Hyderabad - Waverock|Floor 11": ["Blue Wing", "Magenta Wing", "Orange Wing", "Reception", ...DEFAULT_BAYS],
-      "Hyderabad - Waverock|Floor 12": ["ODC IBM", "ODC VOVO", "ODC MS", "Open Area", "Meeting Area", "Focus Room"],
-      "Indore - Brilliant Centre|4th Floor": ["Open Area", "4th Floor Meeting Area", "Meeting Area", "Meeting Room", "Focus Room"],
-      "Kochi- Nippon Q1|10th Floor": ["Open Area", "Meetin Room", "Meeting Room", "Focus Room"],
-      "Kolkata - Godrej Genesis|7th Floor": ["Open Area", "Meeting Area", "Meeting Room", "Focus Room"],
-      "Mumbai - Time Square|12th Floor": ["Open Area", "Meeting Room", "Board Room", "Focus Room"],
-      "Pune - Aryabhata|Floor 2": ["Open Area", "Meeting Area", "Focus Room", "Meeting Room"],
-      "Pune - Bhageerath|Floor 1": ["Block A", ...DEFAULT_BAYS]
+      "Hyderabad - Waverock|Floor 11": ["Blue Wing", "Magenta Wing", "Orange Wing", "Reception"],
+      "Hyderabad - Waverock|Floor 12": ["ODC IBM", "ODC VOVO", "ODC MS", "Open Area", "Meeting Area"]
     };
     const HOLIDAYS = new Set([
       "2026-01-01", "2026-01-26", "2026-03-04", "2026-08-15", "2026-10-02",
@@ -654,7 +660,7 @@
       return FLOOR_CONFIG[location] || [];
     }
     function getBaysForFloor(location, floor) {
-      return BAY_CONFIG[`${location}|${floor}`] || DEFAULT_BAYS;
+      return BAY_CONFIG[`${location}|${floor}`] || LOCATION_BAY_CONFIG[location] || DEFAULT_BAYS;
     }
     function validDate(value) {
       if (!value) return false;
@@ -1319,7 +1325,11 @@
     }
     async function bookSelected() {
       const button = $("#confirmBooking");
+      if (button.disabled || !state.selected.size) return;
       button.disabled = true;
+      button.textContent = "Booking…";
+      $("#bookingFeedback").textContent = "Confirming your workspace…";
+      $("#bookingFeedback").classList.remove("error");
       try {
         await mockApi.createBooking(getSearch(), [...state.selected].map((id) => findItem(id)).filter(Boolean));
         for (const id of state.selected) state.availability.set(id, "booked");
@@ -1331,8 +1341,10 @@
         renderSelectionSummary();
         showToast(`Booking confirmed for ${ids}.`);
       } catch (error) {
-        showToast(error.message);
+        $("#bookingFeedback").textContent = error.message;
+        $("#bookingFeedback").classList.add("error");
       } finally {
+        button.textContent = "Confirm booking";
         button.disabled = false;
       }
     }
