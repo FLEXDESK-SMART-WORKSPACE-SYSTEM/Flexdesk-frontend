@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#173f33">
   <title>FLEXDESK | My Bookings</title>
+  <script src="/auth-guard.js"></script>
   <style>
     :root {
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -73,7 +74,12 @@
   </main>
   <script>
     "use strict";
-    const STORAGE_KEY = "flexdesk_bookings";
+    const sessionUser = JSON.parse(sessionStorage.getItem("flexdesk_user") || "null");
+    if (!sessionUser || sessionUser.id == null) {
+      window.location.replace("/login.html");
+      throw new Error("A signed-in employee is required.");
+    }
+    const STORAGE_KEY = `flexdesk_bookings_${sessionUser.id}`;
     const list = document.querySelector("#bookingList");
     const error = document.querySelector("#storageError");
     const tabs = { upcoming: document.querySelector("#upcomingTab"), history: document.querySelector("#historyTab") };

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#102225">
   <title>FLEXDESK | Check Availability</title>
+  <script src="/auth-guard.js"></script>
   <style>
     :root {
       color-scheme: light;
@@ -599,7 +600,12 @@
       calendarMonth: new Date(), layout: null, zoom: .25, bookings: [], layoutId: "", viewBox: null,
       layers: { desks: true, meeting: true, amenity: true, service: true }
     };
-    const BOOKINGS_STORAGE_KEY = "flexdesk_bookings";
+    const sessionUser = JSON.parse(sessionStorage.getItem("flexdesk_user") || "null");
+    if (!sessionUser || sessionUser.id == null) {
+      window.location.replace("/login.html");
+      throw new Error("A signed-in employee is required.");
+    }
+    const BOOKINGS_STORAGE_KEY = `flexdesk_bookings_${sessionUser.id}`;
     const $ = (selector) => document.querySelector(selector);
     const formScreen = $("#formScreen"), mapScreen = $("#mapScreen");
     const locationInput = $("#locationSearch"), locationOptions = $("#locationOptions");

@@ -2,7 +2,7 @@ import './style.css'
 
 const API = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8002/api/v1'
 const app = document.querySelector('#app')
-function request(path, options = {}) { const token = localStorage.getItem('flexdesk_token'); return fetch(`${API}${path}`, { ...options, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(options.headers || {}) } }).then(async (response) => {
+function request(path, options = {}) { const token = sessionStorage.getItem('flexdesk_token'); return fetch(`${API}${path}`, { ...options, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(options.headers || {}) } }).then(async (response) => {
   const text = await response.text();
   const data = text ? JSON.parse(text) : null;
   if (!response.ok) throw new Error(data?.detail || data?.message || 'Request failed');
@@ -10,7 +10,7 @@ function request(path, options = {}) { const token = localStorage.getItem('flexd
 }) }
 function landingPage() {
   app.innerHTML = `<div class="landing">
-    <header class="landing-header"><a class="landing-brand" href="/" aria-label="FLEXDESK home"><span class="brand-mark">F</span><span>FLEXDESK<small>SMART WORKSPACE SYSTEM</small></span></a><nav class="landing-nav" aria-label="Main navigation"><a href="/">Home</a><a href="#" data-booking="desk">Find a Desk</a><a href="#" data-booking="meeting room">Meeting Rooms</a><a href="#office-spaces">Amenities</a><a href="#intelligence">About</a><a href="/my-bookings.html">My Bookings</a></nav><a class="landing-header-cta" href="#" data-booking="desk">Login / Get Started <span>↗</span></a></header>
+    <header class="landing-header"><a class="landing-brand" href="/" aria-label="FLEXDESK home"><span class="brand-mark">F</span><span>FLEXDESK<small>SMART WORKSPACE SYSTEM</small></span></a><nav class="landing-nav" aria-label="Main navigation"><a href="/">Home</a><a href="#" data-booking="desk">Find a Desk</a><a href="#" data-booking="meeting room">Meeting Rooms</a><a href="#office-spaces">Amenities</a><a href="#intelligence">About</a><a href="/my-bookings.html">My Bookings</a></nav><a class="landing-header-cta" href="#" data-booking="desk">Book Your Workspace <span>↗</span></a></header>
     <main>
       <section class="landing-hero">
         <div class="hero-copy"><span class="landing-eyebrow"><i></i> THE FUTURE OF WORK, IN ONE PLACE</span><h1>FLEXDESK</h1><h2>Smart Workspace.<br><em>Smarter Workdays.</em></h2><p>Find, book and manage your ideal workspace with an intelligent workplace experience designed for modern teams.</p><div class="hero-actions"><a class="landing-button button-dark" href="#" data-booking="desk">Book a Desk <span>→</span></a><a class="landing-button button-light" href="#workspace-types">Explore Workspace <span>↘</span></a></div><div class="hero-proof"><div class="proof-avatars"><b>J</b><b>M</b><b>A</b><b>+</b></div><span><strong>Built around your workday</strong><br>Flexible spaces for modern teams</span></div></div>
@@ -43,33 +43,54 @@ function landingPage() {
     window.location.assign(url);
   }))
 }
+async function logout() {
+  try {
+    await request('/auth/logout', { method: 'POST' });
+  } catch (error) {
+    window.alert(`The server could not record logout: ${error.message}`);
+  } finally {
+    sessionStorage.removeItem('flexdesk_token');
+    sessionStorage.removeItem('flexdesk_user');
+    window.location.replace('/login.html');
+  }
+}
+
 async function startApp() {
-  landingPage();
+  localStorage.removeItem('flexdesk_token');
+  localStorage.removeItem('flexdesk_user');
   const callback = new URLSearchParams(window.location.hash.slice(1));
   const accessToken = callback.get('access_token');
   const ssoError = callback.get('sso_error');
-  if (accessToken) localStorage.setItem('flexdesk_token', accessToken);
+  if (accessToken) sessionStorage.setItem('flexdesk_token', accessToken);
   if (accessToken || ssoError) window.history.replaceState(null, '', window.location.pathname + window.location.search);
 
-  if (localStorage.getItem('flexdesk_token')) {
-    try {
-      const user = await request('/auth/me');
-      localStorage.setItem('flexdesk_user', JSON.stringify(user));
-      return;
-    } catch {
-      localStorage.removeItem('flexdesk_token');
-      localStorage.removeItem('flexdesk_user');
-    }
+  if (ssoError) {
+    window.location.replace(`/login.html?sso_error=${encodeURIComponent(ssoError)}`);
+    return;
+  }
+  if (!sessionStorage.getItem('flexdesk_token')) {
+    window.location.replace('/login.html');
+    return;
   }
 
   try {
-    const demoUser = { email: 'demo@flexdesk.local', password: 'demo123' };
-    const data = await request('/auth/login', { method: 'POST', body: JSON.stringify(demoUser) });
-    localStorage.setItem('flexdesk_token', data.access_token);
-    localStorage.setItem('flexdesk_user', JSON.stringify(data.user));
-    localStorage.setItem('flexdesk_user', JSON.stringify(data.user));
+    const user = await request('/auth/me');
+    sessionStorage.setItem('flexdesk_user', JSON.stringify(user));
+    if (user.role === 'admin') {
+      window.location.replace('/admin.html');
+      return;
+    }
+    landingPage();
+    const button = document.createElement('button');
+    button.className = 'landing-header-cta';
+    button.type = 'button';
+    button.textContent = 'Logout';
+    button.addEventListener('click', logout);
+    document.querySelector('.landing-header').append(button);
   } catch (error) {
-    console.error(error.message || 'Unable to open Flexdesk');
+    sessionStorage.removeItem('flexdesk_token');
+    sessionStorage.removeItem('flexdesk_user');
+    window.location.replace(`/login.html?error=session&next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
   }
 }
 
